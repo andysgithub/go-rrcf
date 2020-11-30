@@ -74,3 +74,25 @@ func SliceToString(a []float64, sep string) string {
 	}
 	return strings.Join(b, sep)
 }
+
+func Ones_bool(rows int, cols int) [][]bool {
+	newArray := make([][]bool, rows)
+
+	for i := 0; i < rows; i++ {
+		newArray[i] = make([]bool, cols)
+		for j := range newArray {
+			newArray[i][j] = true
+		}
+	}
+	return newArray
+}
+
+// AsScalar converts an array of size 1 to its scalar equivalent
+func AsScalar(element []float64) float64 {
+	return element[0]
+}
+
+// FlatNonZero returns indices that are non-zero in the flattened version of the array
+func FlatNonZero(array []float64) []int {
+
+}

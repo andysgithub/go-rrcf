@@ -1,7 +1,6 @@
 package rrcf
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -124,6 +123,7 @@ func contains(array []bool, value bool) bool {
 	return false
 }
 
+// Cut -
 func (rrcf RRCF) Cut(X [][]float64, S []bool, parent *Branch, side string) ([]bool, []bool, *Branch) {
 	subset := num.ArrayBool_float64(X, S)
 	// Find max and min over all d dimensions
@@ -134,23 +134,40 @@ func (rrcf RRCF) Cut(X [][]float64, S []bool, parent *Branch, side string) ([]bo
 	l := num.ArraySub(xmax, xmin)
 	l = num.ArrayDiv(l, num.ArraySum(l))
 
-	fmt.Printf("%v \n", l)
+	// Determine dimension to cut
+	q := num.RngChoice(rrcf.ndim, l)
+	// Determine value for split
+	p := num.RngUniform(xmin[q], xmax[q])
 
 	// Determine subset of points to left
-	S1 := []bool{}
+	arrayLeq := num.ArrayLeq(num.GetColumn(X, q), p)
+	S1 := num.ArrayAnd(arrayLeq, S)
 	// Determine subset of points to right
-	S2 := []bool{}
+	arrayNot := num.ArrayNot(S1)
+	S2 := num.ArrayAnd(arrayNot, S)
 
 	// Create new child node
-	child := NewBranch(0, 0, nil, nil, nil, 0, nil)
+	child := NewBranch(q, p, nil, nil, parent, 0, nil)
+
+	// Link child node to parent
+	if parent != nil {
+		switch side {
+		case "l":
+			parent.l = child
+		case "r":
+			parent.r = child
+		}
+	}
 
 	return S1, S2, child
 }
 
+// CountAllTopDown -
 func (rrcf RRCF) CountAllTopDown(branch *Branch) {
 
 }
 
+// GetBboxTopDown -
 func (rrcf RRCF) GetBboxTopDown(branch *Branch) {
 
 }

@@ -7,6 +7,23 @@ import (
 	"strings"
 )
 
+///// STRING FUNCTIONS /////
+
+// SliceToString returns a string of array values separated by the specified character
+func SliceToString(a []float64, sep string) string {
+	if len(a) == 0 {
+		return ""
+	}
+
+	b := make([]string, len(a))
+	for i, v := range a {
+		b[i] = fmt.Sprintf("%f", v)
+	}
+	return strings.Join(b, sep)
+}
+
+///// ARRAY FUNCTIONS /////
+
 // Around evenly rounds to the given number of decimals
 func Around(X [][]float64, decimals int) [][]float64 {
 	multiplier := math.Pow10(decimals)
@@ -64,18 +81,7 @@ func Unique(X [][]float64) ([][]float64, []int, []int) {
 	return U, I, N
 }
 
-func SliceToString(a []float64, sep string) string {
-	if len(a) == 0 {
-		return ""
-	}
-
-	b := make([]string, len(a))
-	for i, v := range a {
-		b[i] = fmt.Sprintf("%f", v)
-	}
-	return strings.Join(b, sep)
-}
-
+// Ones_bool returns a list of bools set to true
 func Ones_bool(rows int) []bool {
 	newArray := make([]bool, rows)
 
@@ -104,21 +110,8 @@ func FlatNonZero(array []bool) []int {
 	return nonZero
 }
 
-// Randn generates a 2D array of normally distributed random floats
-func Randn(rows, cols int) [][]float64 {
-	newArray := make([][]float64, rows)
-
-	for i := 0; i < rows; i++ {
-		newArray[i] = make([]float64, cols)
-		for j := 0; j < cols; j++ {
-			newArray[i][j] = rand.NormFloat64()
-		}
-	}
-	return newArray
-}
-
-// CopyArray copies a 2D array of floats by value and returns the copy
-func CopyArray(array [][]float64) [][]float64 {
+// ArrayCopy copies a 2D array of floats by value and returns the copy
+func ArrayCopy(array [][]float64) [][]float64 {
 	rows := len(array)
 	cols := len(array[0])
 
@@ -141,6 +134,37 @@ func ArrayIsEqual(array []int, value int) []bool {
 		isEqual = append(isEqual, (element == value))
 	}
 	return isEqual
+}
+
+// ArrayLeq compares an array of ints to a given value
+// Returned array elements are true if less than or equal to value
+func ArrayLeq(array []float64, value float64) []bool {
+	var isLeq []bool
+
+	for _, element := range array {
+		isLeq = append(isLeq, (element <= value))
+	}
+	return isLeq
+}
+
+// ArrayAnd returns the logical and of two boolean arrays
+func ArrayAnd(array1 []bool, array2 []bool) []bool {
+	var andArray []bool
+
+	for i := range array1 {
+		andArray = append(andArray, array1[i] && array2[i])
+	}
+	return andArray
+}
+
+// ArrayNot returns the inverse of a boolean array
+func ArrayNot(array []bool) []bool {
+	var inverseArray []bool
+
+	for _, element := range array {
+		inverseArray = append(inverseArray, !element)
+	}
+	return inverseArray
 }
 
 // ArrayIndices_int returns a slice containing array integers for the specified indices
@@ -225,4 +249,55 @@ func ArrayDiv(array []float64, divisor float64) []float64 {
 		returnSlice = append(returnSlice, array[i]/divisor)
 	}
 	return returnSlice
+}
+
+// GetColumn returns the column with the specified index from an array
+func GetColumn(array [][]float64, columnIndex int) []float64 {
+	column := make([]float64, 0)
+	for _, row := range array {
+		column = append(column, row[columnIndex])
+	}
+	return column
+}
+
+///// RANDOM NUMBER GENERATOR FUNCTIONS /////
+
+// Randn generates a 2D array of normally distributed random floats
+func Randn(rows, cols int) [][]float64 {
+	newArray := make([][]float64, rows)
+
+	for i := 0; i < rows; i++ {
+		newArray[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			newArray[i][j] = rand.NormFloat64()
+		}
+	}
+	return newArray
+}
+
+// RngChoice generates a random integer from the given range according to a probability density function
+func RngChoice(rangeVal int, pdf []float64) int {
+
+	// Calculate the Cumulative Distribution Function
+	cdf := make([]float64, len(pdf))
+	cdf[0] = pdf[0]
+	for i := 1; i < len(pdf); i++ {
+		cdf[i] = cdf[i-1] + pdf[i]
+	}
+
+	randVal := rand.Float64()
+
+	// Select the index from the random value according to the cdf
+	index := 0
+	for randVal > cdf[index] {
+		index++
+	}
+
+	rangeArray := Arange(rangeVal)
+	return rangeArray[index]
+}
+
+// RngUniform produces a value between min and max from a uniform distribution
+func RngUniform(min float64, max float64) float64 {
+	return min + rand.Float64()*(max-min)
 }

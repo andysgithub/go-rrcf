@@ -12,11 +12,11 @@ func TestRRCF(t *testing.T) {
 	n := 100
 	d := 3
 	X := num.Randn(n, d)
-	Z := num.CopyArray(X)
+	Z := num.ArrayCopy(X)
 	Z[10][0] = 1
 
 	tree := RCTree()
 	tree.Init(X, nil, 9, 0)
-	duplicate_tree := RCTree()
-	duplicate_tree.Init(Z, nil, 9, 0)
+	duplicateTree := RCTree()
+	duplicateTree.Init(Z, nil, 9, 0)
 }

@@ -10,27 +10,24 @@ import (
 
 // RRCF - Robust Random Cut Forest
 type RRCF struct {
-	rng          float64
-	leaves       map[string]*Leaf // Map containing pointers to all leaves in tree
-	root         *Branch          // Pointer to root of tree
-	ndim         int              // Dimension of points in the tree
-	index_labels []int            // Index labels
-	u            *Node            // Parent of the current node
+	rng         float64
+	leaves      map[int]*Leaf // Map containing pointers to all leaves in tree
+	root        *Branch       // Pointer to root of tree
+	ndim        int           // Dimension of points in the tree
+	indexLabels []int         // Index labels
+	u           *Node         // Parent of the current node
 }
 
 type Node struct {
 	u *Node
 }
 
-type Leaf struct {
-}
-
 // NewRRCF - Returns a new random cut forest
-func NewRRCF() RRCF {
+func RCTree() RRCF {
 	rand.Seed(time.Now().UTC().UnixNano())
 	rrcf := RRCF{
 		rand.Float64(),
-		make(map[string]*Leaf),
+		make(map[int]*Leaf),
 		nil, 0, nil, nil,
 	}
 
@@ -38,29 +35,29 @@ func NewRRCF() RRCF {
 }
 
 // Init - Initialises the random cut forest
-func (rrcf RRCF) Init(X [][]float64, index_labels []int, precision int, random_state int64) {
+func (rrcf RRCF) Init(X [][]float64, indexLabels []int, precision int, random_state int64) {
 	if random_state != 0 {
 		// Random number generation with provided seed
 		rand.Seed(random_state)
-		rrcf.rng = rand.Float64()
 	}
+	rrcf.rng = rand.Float64()
+
 	// Round data to avoid sorting errors
 	X = num.Around(X, precision)
-	if index_labels == nil {
-		rrcf.index_labels = num.Arange(len(X[0]))
-	} else {
-		rrcf.index_labels = index_labels
+	if indexLabels == nil {
+		indexLabels = num.Arange(len(X))
 	}
+	rrcf.indexLabels = indexLabels
 
 	// Remove duplicated rows
 	U, I, N := num.Unique(X)
 
-	fmt.Printf("%v %v %v\n", U, I, N)
+	//fmt.Printf("%v %v %v\n", U, I, N)
 
 	dataRows := len(U)
 	dataCols := len(U[0])
 
-	fmt.Printf("%v %v\n", dataRows, dataCols)
+	//fmt.Printf("%v %v\n", dataRows, dataCols)
 
 	// Store dimension of dataset
 	rrcf.ndim = dataCols
@@ -69,34 +66,85 @@ func (rrcf RRCF) Init(X [][]float64, index_labels []int, precision int, random_s
 	rrcf.u = nil
 
 	// Create RRC Tree
-	S := num.Ones_bool(dataRows, dataCols)
+	S := num.Ones_bool(dataRows)
 	rrcf.MakeTree(X, S, N, I, nil, "root", 0)
 
 	// Remove parent of root
-	rrcf.root.node.u = nil
+	rrcf.root.u = nil
 	// Count all leaves under each branch
 	rrcf.CountAllTopDown(rrcf.root)
 	// Set bboxes of all branches
 	rrcf.GetBboxTopDown(rrcf.root)
 }
 
-func (rrcf RRCF) MakeTree(X [][]float64, S [][]bool, N []int, I []int, parent *Node, side string, depth int) {
+func (rrcf RRCF) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *Branch, side string, depth int) {
 	// Increment depth as we traverse down
 	depth++
 	// Create a cut according to definition 1
-	S1, S2, branch = rrcf.Cut(X, S, parent, side)
+	S1, S2, branch := rrcf.Cut(X, S, parent, side)
 	// If S1 does not contain an isolated point
-	if S1.sum() > 1 {
+	if contains(S1, true) {
 		// Recursively construct tree on S1
-		rrcf.MakeTree(X, S1, N, I, branch.node, 'l', depth)
+		rrcf.MakeTree(X, S1, N, I, branch, "l", depth)
 	} else {
 		// Create a leaf node from the isolated point
-        i = num.AsScalar(num.FlatNonZero(S1))
+		i := int(num.AsScalar(num.FlatNonZero(S1)))
+		leaf := NewLeaf(i, depth, branch, X[i][:], N[i])
+		// Link leaf node to parent
+		branch.l = leaf
+		// If duplicates exist
+		if i > 0 {
+			// Add a key in the leaves map pointing to leaf for all duplicate indices
+			J := num.FlatNonZero(num.ArrayIsEqual(I, i))
+			// Get index label
+			J = num.ArrayIndices_int(rrcf.indexLabels, J)
+			for _, j := range J {
+				rrcf.leaves[j] = leaf
+			}
+		} else {
+			i = rrcf.indexLabels[i]
+			rrcf.leaves[i] = leaf
+		}
+	}
+	// If S2 does not contain an isolated point
+	if contains(S2, true) {
+		// Recursively construct tree on S2
+		rrcf.MakeTree(X, S2, N, I, branch, "r", depth)
+	} else {
+		// Create a leaf node from isolated point
 	}
 }
 
-func (rrcf RRCF) Cut(X [][]float64, S [][]bool, parent *Node, side string) [][]bool, [][]bool,  {
+func contains(array []bool, value bool) bool {
+	for _, element := range array {
+		if element == value {
+			return true
+		}
+	}
+	return false
+}
 
+func (rrcf RRCF) Cut(X [][]float64, S []bool, parent *Branch, side string) ([]bool, []bool, *Branch) {
+	subset := num.ArrayBool_float64(X, S)
+	// Find max and min over all d dimensions
+	xmax := num.MaxColValues(subset)
+	xmin := num.MinColValues(subset)
+
+	// Compute l
+	l := num.ArraySub(xmax, xmin)
+	l = num.ArrayDiv(l, num.ArraySum(l))
+
+	fmt.Printf("%v \n", l)
+
+	// Determine subset of points to left
+	S1 := []bool{}
+	// Determine subset of points to right
+	S2 := []bool{}
+
+	// Create new child node
+	child := NewBranch(0, 0, nil, nil, nil, 0, nil)
+
+	return S1, S2, child
 }
 
 func (rrcf RRCF) CountAllTopDown(branch *Branch) {

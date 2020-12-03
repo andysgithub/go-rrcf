@@ -3,6 +3,7 @@ package num
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"strings"
 )
 
@@ -75,24 +76,153 @@ func SliceToString(a []float64, sep string) string {
 	return strings.Join(b, sep)
 }
 
-func Ones_bool(rows int, cols int) [][]bool {
-	newArray := make([][]bool, rows)
+func Ones_bool(rows int) []bool {
+	newArray := make([]bool, rows)
 
 	for i := 0; i < rows; i++ {
-		newArray[i] = make([]bool, cols)
-		for j := range newArray {
-			newArray[i][j] = true
-		}
+		newArray[i] = true
 	}
 	return newArray
 }
 
 // AsScalar converts an array of size 1 to its scalar equivalent
-func AsScalar(element []float64) float64 {
+func AsScalar(element []int) int {
 	return element[0]
 }
 
 // FlatNonZero returns indices that are non-zero in the flattened version of the array
-func FlatNonZero(array []float64) []int {
+func FlatNonZero(array []bool) []int {
+	var nonZero []int
+	index := 0
 
+	for _, element := range array {
+		if element == true {
+			nonZero = append(nonZero, index)
+		}
+		index++
+	}
+	return nonZero
+}
+
+// Randn generates a 2D array of normally distributed random floats
+func Randn(rows, cols int) [][]float64 {
+	newArray := make([][]float64, rows)
+
+	for i := 0; i < rows; i++ {
+		newArray[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			newArray[i][j] = rand.NormFloat64()
+		}
+	}
+	return newArray
+}
+
+// CopyArray copies a 2D array of floats by value and returns the copy
+func CopyArray(array [][]float64) [][]float64 {
+	rows := len(array)
+	cols := len(array[0])
+
+	duplicate := make([][]float64, rows)
+	for i := 0; i < rows; i++ {
+		duplicate[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			duplicate[i][j] = array[i][j]
+		}
+	}
+	return duplicate
+}
+
+// ArrayIsEqual compares an array of ints to a given value
+// Returned array elements are true if equal to value
+func ArrayIsEqual(array []int, value int) []bool {
+	var isEqual []bool
+
+	for _, element := range array {
+		isEqual = append(isEqual, (element == value))
+	}
+	return isEqual
+}
+
+// ArrayIndices_int returns a slice containing array integers for the specified indices
+func ArrayIndices_int(array []int, indices []int) []int {
+	var returnSlice []int
+
+	for _, index := range indices {
+		returnSlice = append(returnSlice, array[index])
+	}
+	return returnSlice
+}
+
+// ArrayBool_float64 returns a slice containing array rows where the corresponding bool is true
+func ArrayBool_float64(array [][]float64, indices []bool) [][]float64 {
+	var returnSlice [][]float64
+
+	for index, isTrue := range indices {
+		if isTrue {
+			returnSlice = append(returnSlice, array[index])
+		}
+	}
+	return returnSlice
+}
+
+// MaxColValues returns the maximum value for each column in the array
+func MaxColValues(array [][]float64) []float64 {
+	rows := len(array)
+	cols := len(array[0])
+	minVal := math.SmallestNonzeroFloat64
+
+	maxValues := []float64{minVal, minVal, minVal}
+
+	for col := 0; col < cols; col++ {
+		for row := 0; row < rows; row++ {
+			maxValues[col] = math.Max(array[row][col], maxValues[col])
+		}
+	}
+	return maxValues
+}
+
+// MinColValues returns the minimum value for each column in the array
+func MinColValues(array [][]float64) []float64 {
+	rows := len(array)
+	cols := len(array[0])
+	maxVal := math.MaxFloat64
+
+	minValues := []float64{maxVal, maxVal, maxVal}
+
+	for col := 0; col < cols; col++ {
+		for row := 0; row < rows; row++ {
+			minValues[col] = math.Min(array[row][col], minValues[col])
+		}
+	}
+	return minValues
+}
+
+// ArraySum returns the total of the elements in a list
+func ArraySum(array []float64) float64 {
+	total := float64(0)
+
+	for _, element := range array {
+		total += element
+	}
+	return total
+}
+
+// ArraySub returns the difference between the elements of two lists
+func ArraySub(array1 []float64, array2 []float64) []float64 {
+	var returnSlice []float64
+
+	for i := range array1 {
+		returnSlice = append(returnSlice, array1[i]-array2[i])
+	}
+	return returnSlice
+}
+
+// ArrayDiv returns the elements of a list divided by the specified value
+func ArrayDiv(array []float64, divisor float64) []float64 {
+	var returnSlice []float64
+
+	for i := range array {
+		returnSlice = append(returnSlice, array[i]/divisor)
+	}
+	return returnSlice
 }

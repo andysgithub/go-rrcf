@@ -221,8 +221,8 @@ func MinColValues(array [][]float64) []float64 {
 	return minValues
 }
 
-// ArraySum returns the total of the elements in a list
-func ArraySum(array []float64) float64 {
+// ArraySumFloat returns the total of the elements in a list
+func ArraySumFloat(array []float64) float64 {
 	total := float64(0)
 
 	for _, element := range array {
@@ -258,6 +258,27 @@ func GetColumn(array [][]float64, columnIndex int) []float64 {
 		column = append(column, row[columnIndex])
 	}
 	return column
+}
+
+// ArrayFillRows fills array rows with the specified value
+func ArrayFillRows(array [][]float64, rowStart int, rowEnd int, value float64) [][]float64 {
+	for i := rowStart; i <= rowEnd; i++ {
+		for j := 0; j < len(array[0]); j++ {
+			array[i][j] = value
+		}
+	}
+	return array
+}
+
+// ArraySumBool totals the true values in the list
+func ArraySumBool(array []bool) int {
+	sum := 0
+	for _, isTrue := range array {
+		if isTrue {
+			sum++
+		}
+	}
+	return sum
 }
 
 ///// RANDOM NUMBER GENERATOR FUNCTIONS /////

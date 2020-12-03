@@ -13,7 +13,7 @@ func TestRRCF(t *testing.T) {
 	d := 3
 	X := num.Randn(n, d)
 	Z := num.ArrayCopy(X)
-	Z[10][0] = 1
+	Z = num.ArrayFillRows(Z, 90, 99, float64(1))
 
 	tree := RCTree()
 	tree.Init(X, nil, 9, 0)

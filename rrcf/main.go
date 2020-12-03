@@ -1,6 +1,7 @@
 package rrcf
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -10,23 +11,19 @@ import (
 // RRCF - Robust Random Cut Forest
 type RRCF struct {
 	rng         float64
-	leaves      map[int]*Leaf // Map containing pointers to all leaves in tree
-	root        *Branch       // Pointer to root of tree
+	leaves      map[int]*Node // Map containing pointers to all leaves in tree
+	root        *Node         // Pointer to root of tree
 	ndim        int           // Dimension of points in the tree
 	indexLabels []int         // Index labels
 	u           *Node         // Parent of the current node
 }
 
-type Node struct {
-	u *Node
-}
-
-// NewRRCF - Returns a new random cut forest
+// RCTree returns a new random cut forest
 func RCTree() RRCF {
 	rand.Seed(time.Now().UTC().UnixNano())
 	rrcf := RRCF{
 		rand.Float64(),
-		make(map[int]*Leaf),
+		make(map[int]*Node),
 		nil, 0, nil, nil,
 	}
 
@@ -34,10 +31,10 @@ func RCTree() RRCF {
 }
 
 // Init - Initialises the random cut forest
-func (rrcf RRCF) Init(X [][]float64, indexLabels []int, precision int, random_state int64) {
-	if random_state != 0 {
+func (rrcf RRCF) Init(X [][]float64, indexLabels []int, precision int, randomState int64) {
+	if randomState != 0 {
 		// Random number generation with provided seed
-		rand.Seed(random_state)
+		rand.Seed(randomState)
 	}
 	rrcf.rng = rand.Float64()
 
@@ -76,13 +73,14 @@ func (rrcf RRCF) Init(X [][]float64, indexLabels []int, precision int, random_st
 	rrcf.GetBboxTopDown(rrcf.root)
 }
 
-func (rrcf RRCF) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *Branch, side string, depth int) {
+// MakeTree -
+func (rrcf RRCF) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *Node, side string, depth int) {
 	// Increment depth as we traverse down
 	depth++
 	// Create a cut according to definition 1
 	S1, S2, branch := rrcf.Cut(X, S, parent, side)
 	// If S1 does not contain an isolated point
-	if contains(S1, true) {
+	if num.ArraySumBool(S1) > 1 {
 		// Recursively construct tree on S1
 		rrcf.MakeTree(X, S1, N, I, branch, "l", depth)
 	} else {
@@ -106,11 +104,12 @@ func (rrcf RRCF) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *Bra
 		}
 	}
 	// If S2 does not contain an isolated point
-	if contains(S2, true) {
+	if num.ArraySumBool(S2) > 1 {
 		// Recursively construct tree on S2
 		rrcf.MakeTree(X, S2, N, I, branch, "r", depth)
 	} else {
 		// Create a leaf node from isolated point
+		fmt.Printf("%s\n", "Create leaf")
 	}
 }
 
@@ -124,7 +123,7 @@ func contains(array []bool, value bool) bool {
 }
 
 // Cut -
-func (rrcf RRCF) Cut(X [][]float64, S []bool, parent *Branch, side string) ([]bool, []bool, *Branch) {
+func (rrcf RRCF) Cut(X [][]float64, S []bool, parent *Node, side string) ([]bool, []bool, *Node) {
 	subset := num.ArrayBool_float64(X, S)
 	// Find max and min over all d dimensions
 	xmax := num.MaxColValues(subset)
@@ -132,7 +131,7 @@ func (rrcf RRCF) Cut(X [][]float64, S []bool, parent *Branch, side string) ([]bo
 
 	// Compute l
 	l := num.ArraySub(xmax, xmin)
-	l = num.ArrayDiv(l, num.ArraySum(l))
+	l = num.ArrayDiv(l, num.ArraySumFloat(l))
 
 	// Determine dimension to cut
 	q := num.RngChoice(rrcf.ndim, l)
@@ -163,11 +162,11 @@ func (rrcf RRCF) Cut(X [][]float64, S []bool, parent *Branch, side string) ([]bo
 }
 
 // CountAllTopDown -
-func (rrcf RRCF) CountAllTopDown(branch *Branch) {
+func (rrcf RRCF) CountAllTopDown(branch *Node) {
 
 }
 
 // GetBboxTopDown -
-func (rrcf RRCF) GetBboxTopDown(branch *Branch) {
+func (rrcf RRCF) GetBboxTopDown(branch *Node) {
 
 }

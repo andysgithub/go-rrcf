@@ -5,6 +5,8 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+
+	"github.com/andysgithub/go-rrcf/utils"
 )
 
 ///// STRING FUNCTIONS /////
@@ -81,8 +83,8 @@ func Unique(X [][]float64) ([][]float64, []int, []int) {
 	return U, I, N
 }
 
-// Ones_bool returns a list of bools set to true
-func Ones_bool(rows int) []bool {
+// OnesBool returns a list of bools set to true
+func OnesBool(rows int) []bool {
 	newArray := make([]bool, rows)
 
 	for i := 0; i < rows; i++ {
@@ -125,15 +127,36 @@ func ArrayCopy(array [][]float64) [][]float64 {
 	return duplicate
 }
 
-// ArrayIsEqual compares an array of ints to a given value
+// ArrayContains -
+func ArrayContains(array []bool, value bool) bool {
+	for _, element := range array {
+		if element == value {
+			return true
+		}
+	}
+	return false
+}
+
+// ArrayEqInt compares an array of ints to a given value
 // Returned array elements are true if equal to value
-func ArrayIsEqual(array []int, value int) []bool {
+func ArrayEqInt(array []int, value int) []bool {
 	var isEqual []bool
 
 	for _, element := range array {
 		isEqual = append(isEqual, (element == value))
 	}
 	return isEqual
+}
+
+// ArrayCompare compares two boolean arrays
+// Returns true if all array elements are equal
+func ArrayCompare(array1 []bool, array2 []bool) bool {
+	for i := range array1 {
+		if array1[i] != array2[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // ArrayLeq compares an array of ints to a given value
@@ -167,8 +190,8 @@ func ArrayNot(array []bool) []bool {
 	return inverseArray
 }
 
-// ArrayIndices_int returns a slice containing array integers for the specified indices
-func ArrayIndices_int(array []int, indices []int) []int {
+// ArrayIndicesInt returns a slice containing array integers for the specified indices
+func ArrayIndicesInt(array []int, indices []int) []int {
 	var returnSlice []int
 
 	for _, index := range indices {
@@ -177,8 +200,8 @@ func ArrayIndices_int(array []int, indices []int) []int {
 	return returnSlice
 }
 
-// ArrayBool_float64 returns a slice containing array rows where the corresponding bool is true
-func ArrayBool_float64(array [][]float64, indices []bool) [][]float64 {
+// ArrayBoolFloat64 returns a slice containing array rows where the corresponding bool is true
+func ArrayBoolFloat64(array [][]float64, indices []bool) [][]float64 {
 	var returnSlice [][]float64
 
 	for index, isTrue := range indices {
@@ -193,7 +216,7 @@ func ArrayBool_float64(array [][]float64, indices []bool) [][]float64 {
 func MaxColValues(array [][]float64) []float64 {
 	rows := len(array)
 	cols := len(array[0])
-	minVal := math.SmallestNonzeroFloat64
+	minVal := -math.MaxFloat64
 
 	maxValues := []float64{minVal, minVal, minVal}
 
@@ -217,6 +240,28 @@ func MinColValues(array [][]float64) []float64 {
 		for row := 0; row < rows; row++ {
 			minValues[col] = math.Min(array[row][col], minValues[col])
 		}
+	}
+	return minValues
+}
+
+// ArrayMaximum compares two arrays and returns a new array containing the element-wise maxima
+func ArrayMaximum(array1 []float64, array2 []float64) []float64 {
+	var maxValues []float64
+	cols := len(array1)
+
+	for col := 0; col < cols; col++ {
+		maxValues = append(maxValues, utils.Max(array1[col], array2[col]))
+	}
+	return maxValues
+}
+
+// ArrayMinimum compares two arrays and returns a new array containing the element-wise minima
+func ArrayMinimum(array1 []float64, array2 []float64) []float64 {
+	var minValues []float64
+	cols := len(array1)
+
+	for col := 0; col < cols; col++ {
+		minValues = append(minValues, utils.Min(array1[col], array2[col]))
 	}
 	return minValues
 }
@@ -281,6 +326,25 @@ func ArraySumBool(array []bool) int {
 	return sum
 }
 
+// ArrayVStack stacks the sequence of input arrays vertically to make a single array
+func ArrayVStack(array1 []float64, array2 []float64) [][]float64 {
+	var stacked [][]float64
+
+	stacked = append(stacked, array1)
+	stacked = append(stacked, array2)
+	return stacked
+}
+
+// Full returns a 1D array of given length, filled with fillValue.
+func Full(length int, fillValue float64) []float64 {
+	var filledArray []float64
+
+	for i := 0; i < length; i++ {
+		filledArray = append(filledArray, fillValue)
+	}
+	return filledArray
+}
+
 ///// RANDOM NUMBER GENERATOR FUNCTIONS /////
 
 // Randn generates a 2D array of normally distributed random floats
@@ -296,8 +360,8 @@ func Randn(rows, cols int) [][]float64 {
 	return newArray
 }
 
-// RngChoice generates a random integer from the given range according to a probability density function
-func RngChoice(rangeVal int, pdf []float64) int {
+// RndChoice generates a random integer from the given range according to a probability density function
+func RndChoice(rangeVal int, pdf []float64) int {
 
 	// Calculate the Cumulative Distribution Function
 	cdf := make([]float64, len(pdf))
@@ -318,7 +382,15 @@ func RngChoice(rangeVal int, pdf []float64) int {
 	return rangeArray[index]
 }
 
-// RngUniform produces a value between min and max from a uniform distribution
-func RngUniform(min float64, max float64) float64 {
+// RndUniform produces a value between min and max from a uniform distribution
+func RndUniform(min float64, max float64) float64 {
 	return min + rand.Float64()*(max-min)
+}
+
+// RndShuffle -
+func RndShuffle(deck []int) []int {
+	rand.Shuffle(len(deck), func(i, j int) {
+		deck[i], deck[j] = deck[j], deck[i]
+	})
+	return deck
 }

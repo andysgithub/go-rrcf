@@ -9,11 +9,11 @@ type Node struct {
 	b1 []float64 // Bounding box of point (1D)
 
 	// For branch:
-	q  int     // Dimension of cut
-	p  float64 // Value of cut
-	l  *Node   // Pointer to left child
-	r  *Node   // Pointer to right child
-	b2 [][]int // Bounding box of points under branch (2D)
+	q  int         // Dimension of cut
+	p  float64     // Value of cut
+	l  *Node       // Pointer to left child
+	r  *Node       // Pointer to right child
+	b2 [][]float64 // Bounding box of points under branch (2D)
 
 	// Common:
 	u *Node // Pointer to parent
@@ -21,7 +21,7 @@ type Node struct {
 }
 
 // NewBranch defines a new branch of a tree
-func NewBranch(q int, p float64, l *Node, r *Node, u *Node, n int, b [][]int) *Node {
+func NewBranch(q int, p float64, l *Node, r *Node, u *Node, n int, b [][]float64) *Node {
 	branch := Node{
 		0, 0, nil, nil, q, p, l, r, b, u, n,
 	}

@@ -93,7 +93,7 @@ func (rrcf *RRCF) Init(X [][]float64, indexLabels []int, precision int, randomSt
 	rrcf.GetBboxTopDown(rrcf.root)
 }
 
-// MakeTree -
+// MakeTree generates a random cut tree
 func (rrcf *RRCF) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *Node, side string, depth int) {
 
 	bufferMain.Reset()
@@ -156,7 +156,7 @@ func (rrcf *RRCF) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *No
 	depth--
 }
 
-// Cut -
+// Cut creates a child node to the left or right of the parent
 func (rrcf *RRCF) Cut(X [][]float64, S []bool, parent *Node, side string) ([]bool, []bool, *Node) {
 	subset := num.ArrayBoolFloat64(X, S)
 	// Find max and min over all d dimensions
@@ -184,15 +184,9 @@ func (rrcf *RRCF) Cut(X [][]float64, S []bool, parent *Node, side string) ([]boo
 	arrayNot := num.ArrayNot(S1)
 	S2 := num.ArrayAnd(arrayNot, S) // S2 is all the points in S not in S1
 
-	// ALERT: If S1 = S, S2 will be all false
-	// arrayLeq must be false in a position where S is true
-
 	if num.ArrayCompare(S, S1) {
 		bufferMain.Reset()
-		bufferMain.WriteString("Warning: S = S1\n")
-		bufferMain.WriteString(fmt.Sprintf("Total points in S: %d\n", num.ArraySumBool(S)))
-		bufferMain.WriteString(fmt.Sprintf("Total points in S1: %d\n", num.ArraySumBool(S1)))
-		bufferMain.WriteString(fmt.Sprintf("Total points in S2: %d\n", num.ArraySumBool(S2)))
+		bufferMain.WriteString("Warning: S equals S1\n")
 		fmt.Fprintln(logMain, bufferMain.String())
 	}
 
@@ -214,45 +208,18 @@ func (rrcf *RRCF) Cut(X [][]float64, S []bool, parent *Node, side string) ([]boo
 	return S1, S2, child
 }
 
-// CountAllTopDown recursively computes the number of leaves below each branch from root to leaves
-func (rrcf RRCF) CountAllTopDown(node *Node) {
+// MapLeaves traverses the tree recursively, calling Accumulate on leaves
+func (rrcf RRCF) MapLeaves(node *Node, accumulator *int) {
 	if isBranch(node) {
 		if node.l != nil {
-			rrcf.CountAllTopDown(node.l)
+			rrcf.MapLeaves(node.l, accumulator)
 		}
 		if node.r != nil {
-			rrcf.CountAllTopDown(node.r)
+			rrcf.MapLeaves(node.r, accumulator)
 		}
-		node.n = node.l.n + node.r.n
+	} else {
+		rrcf.Accumulate(node, accumulator)
 	}
-}
-
-// GetBboxTopDown recursively computes bboxes of all branches from root to leaves
-func (rrcf RRCF) GetBboxTopDown(node *Node) {
-	if isBranch(node) {
-		if node.l != nil {
-			rrcf.GetBboxTopDown(node.l)
-		}
-		if node.r != nil {
-			rrcf.GetBboxTopDown(node.r)
-		}
-		bbox := lrBranchBbox(node)
-		node.b2 = bbox
-	}
-}
-
-// GetBbox computes the bounding box of all points underneath a given branch
-func (rrcf RRCF) GetBbox(branch *Node) [][]float64 {
-	if branch == nil {
-		branch = rrcf.root
-	}
-
-	mins := num.Full(rrcf.ndim, math.Inf(1))
-	maxes := num.Full(rrcf.ndim, math.Inf(-1))
-	//rrcf.MapLeaves(branch, GetBbox, mins, maxes)
-	bbox := num.ArrayVStack(mins, maxes)
-
-	return bbox
 }
 
 // MapBranches traverses the tree recursively, calling GetNodes on branches
@@ -269,37 +236,146 @@ func (rrcf RRCF) MapBranches(node *Node, branches []Node) []Node {
 	return branches
 }
 
-// MapLeaves traverses the tree recursively, calling function f on leaves
-func (rrcf RRCF) MapLeaves(node *Node, f func(*Node, *int), accumulator *int) {
+// MapBboxes traverses the tree recursively, calling GetBbox on leaves
+func (rrcf RRCF) MapBboxes(node *Node, mins []float64, maxes []float64) {
 	if isBranch(node) {
 		if node.l != nil {
-			rrcf.MapLeaves(node.l, f, accumulator)
+			rrcf.MapBboxes(node.l, mins, maxes)
 		}
 		if node.r != nil {
-			rrcf.MapLeaves(node.r, f, accumulator)
+			rrcf.MapBboxes(node.r, mins, maxes)
 		}
 	} else {
-		f(node, accumulator)
+		rrcf.ComputeBbox(node, mins, maxes)
 	}
 }
 
-// GetNodes accumulates a list of all leaves in a subtree
-func (rrcf RRCF) GetNodes(node *Node, stack []Node) []Node {
-	stack = append(stack, *node)
-	return stack
+// ForgetPoint -
+func (rrcf RRCF) ForgetPoint() {
+
 }
 
-// Accumulate counts the number of points in a subtree
-func (rrcf RRCF) Accumulate(node *Node, accumulator *int) {
-	*accumulator += node.n
+// UpdateLeafCountUpwards -
+func (rrcf RRCF) UpdateLeafCountUpwards() {
+
 }
 
-// CountLeaves counts the total leaves underneath a single node
-func (rrcf RRCF) CountLeaves(branch *Node) int {
-	var numLeaves int
+// InsertPoint -
+func (rrcf RRCF) InsertPoint() {
 
-	rrcf.MapLeaves(branch, rrcf.Accumulate, &numLeaves)
-	return numLeaves
+}
+
+// Query -
+func (rrcf RRCF) Query() {
+
+}
+
+// Disp computes displacement at leaf
+func (rrcf RRCF) Disp(param interface{}) (int, error) {
+	leaf, ok := param.(*Node)
+	if !ok {
+		index, ok := param.(int)
+		if !ok {
+			return 0, fmt.Errorf("CoDisp parameter not recognised: %v", leaf)
+		}
+		leaf = rrcf.leaves[index]
+	}
+
+	// Handle case where leaf is root
+	if isRoot(leaf) {
+		return 0, nil
+	}
+
+	parent := leaf.u
+	// Find sibling
+	sibling := parent.l
+	if leaf == parent.l {
+		sibling = parent.r
+	}
+	// Count number of nodes in sibling subtree
+	displacement := sibling.n
+	return displacement, nil
+}
+
+// CoDisp computes collusive displacement at leaf
+func (rrcf RRCF) CoDisp(param interface{}) (float64, error) {
+	leaf, ok := param.(*Node)
+	if !ok {
+		index, ok := param.(int)
+		if !ok {
+			return 0, fmt.Errorf("CoDisp parameter not recognised: %v", leaf)
+		}
+		leaf = rrcf.leaves[index]
+	}
+
+	// Handle case where leaf is root
+	if isRoot(leaf) {
+		return 0, nil
+	}
+	node := leaf
+	var results []float64
+
+	for i := 0; i < node.d; i++ {
+		parent := node.u
+		if parent == nil {
+			break
+		}
+		sibling := parent.l
+		if node == parent.l {
+			sibling = parent.r
+		}
+		numDeleted := node.n
+		displacement := sibling.n
+		result := float64(displacement / numDeleted)
+		results = append(results, result)
+		node = parent
+	}
+	coDisplacement := num.ArrayMaxValue(results)
+	return coDisplacement, nil
+}
+
+// GetBbox computes the bounding box of all points underneath a given branch
+func (rrcf RRCF) GetBbox(branch *Node) [][]float64 {
+	if branch == nil {
+		branch = rrcf.root
+	}
+
+	mins := num.Full(rrcf.ndim, math.Inf(1))
+	maxes := num.Full(rrcf.ndim, math.Inf(-1))
+	rrcf.MapBboxes(branch, mins, maxes)
+	bbox := num.ArrayVStack(mins, maxes)
+
+	return bbox
+}
+
+// FindDuplicate -
+func (rrcf RRCF) FindDuplicate() {
+
+}
+
+// ToDict -
+func (rrcf RRCF) ToDict() {
+
+}
+
+// Serialise -
+func (rrcf RRCF) Serialise() {
+
+}
+
+// LoadDict -
+func (rrcf RRCF) LoadDict() {
+
+}
+
+// Deserialise -
+func (rrcf RRCF) Deserialise() {
+
+}
+
+// FromDict -
+func (rrcf RRCF) FromDict() {
+
 }
 
 // lrBranchBbox computes the bbox of a node based on bboxes of the node's children
@@ -331,6 +407,57 @@ func lrBranchBbox(node *Node) [][]float64 {
 	return bbox
 }
 
-func isBranch(node *Node) bool {
-	return node.p != 0
+// GetBboxTopDown recursively computes bboxes of all branches from root to leaves
+func (rrcf RRCF) GetBboxTopDown(node *Node) {
+	if isBranch(node) {
+		if node.l != nil {
+			rrcf.GetBboxTopDown(node.l)
+		}
+		if node.r != nil {
+			rrcf.GetBboxTopDown(node.r)
+		}
+		bbox := lrBranchBbox(node)
+		node.b2 = bbox
+	}
+}
+
+// CountAllTopDown recursively computes the number of leaves below each branch from root to leaves
+func (rrcf RRCF) CountAllTopDown(node *Node) {
+	if isBranch(node) {
+		if node.l != nil {
+			rrcf.CountAllTopDown(node.l)
+		}
+		if node.r != nil {
+			rrcf.CountAllTopDown(node.r)
+		}
+		node.n = node.l.n + node.r.n
+	}
+}
+
+// CountLeaves counts the total leaves underneath a single node
+func (rrcf RRCF) CountLeaves(branch *Node) int {
+	var numLeaves int
+
+	rrcf.MapLeaves(branch, &numLeaves)
+	return numLeaves
+}
+
+// SearchForLeaf -
+func (rrcf RRCF) SearchForLeaf() {
+
+}
+
+// TightenBboxUpwards -
+func (rrcf RRCF) TightenBboxUpwards() {
+
+}
+
+// RelaxBboxUpwards -
+func (rrcf RRCF) RelaxBboxUpwards() {
+
+}
+
+// InsertPointCut -
+func (rrcf RRCF) InsertPointCut() {
+
 }

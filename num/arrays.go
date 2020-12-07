@@ -1,30 +1,10 @@
 package num
 
 import (
-	"fmt"
 	"math"
-	"math/rand"
-	"strings"
 
 	"github.com/andysgithub/go-rrcf/utils"
 )
-
-///// STRING FUNCTIONS /////
-
-// SliceToString returns a string of array values separated by the specified character
-func SliceToString(a []float64, sep string) string {
-	if len(a) == 0 {
-		return ""
-	}
-
-	b := make([]string, len(a))
-	for i, v := range a {
-		b[i] = fmt.Sprintf("%f", v)
-	}
-	return strings.Join(b, sep)
-}
-
-///// ARRAY FUNCTIONS /////
 
 // Around evenly rounds to the given number of decimals
 func Around(X [][]float64, decimals int) [][]float64 {
@@ -159,6 +139,28 @@ func ArrayCompare(array1 []bool, array2 []bool) bool {
 	return true
 }
 
+// ArrayLt compares an array of ints to a given value
+// Returned array elements are true if less than value
+func ArrayLt(array1 []float64, array2 []float64) []bool {
+	var isLt []bool
+
+	for i := range array1 {
+		isLt = append(isLt, (array1[i] < array2[i]))
+	}
+	return isLt
+}
+
+// ArrayGt compares an array of ints to a given value
+// Returned array elements are true if greater than value
+func ArrayGt(array1 []float64, array2 []float64) []bool {
+	var isGt []bool
+
+	for i := range array1 {
+		isGt = append(isGt, (array1[i] > array2[i]))
+	}
+	return isGt
+}
+
 // ArrayLeq compares an array of ints to a given value
 // Returned array elements are true if less than or equal to value
 func ArrayLeq(array []float64, value float64) []bool {
@@ -188,6 +190,16 @@ func ArrayNot(array []bool) []bool {
 		inverseArray = append(inverseArray, !element)
 	}
 	return inverseArray
+}
+
+// ArrayCopyWhenTrue copies array2 elements into array1 where the bools array element is true
+func ArrayCopyWhenTrue(array1 []float64, array2 []float64, bools []bool) []float64 {
+	for i, element := range array2 {
+		if bools[i] {
+			array1[i] = element
+		}
+	}
+	return array1
 }
 
 // ArrayIndicesInt returns a slice containing array integers for the specified indices
@@ -242,6 +254,16 @@ func MinColValues(array [][]float64) []float64 {
 		}
 	}
 	return minValues
+}
+
+// ArrayMaxValue returns the maximum value in a list
+func ArrayMaxValue(array []float64) float64 {
+	maxVal := -math.MaxFloat64
+
+	for _, value := range array {
+		maxVal = math.Max(value, maxVal)
+	}
+	return maxVal
 }
 
 // ArrayMaximum compares two arrays and returns a new array containing the element-wise maxima
@@ -335,7 +357,7 @@ func ArrayVStack(array1 []float64, array2 []float64) [][]float64 {
 	return stacked
 }
 
-// Full returns a 1D array of given length, filled with fillValue.
+// Full returns a 1D array of given length, filled with fillValue
 func Full(length int, fillValue float64) []float64 {
 	var filledArray []float64
 
@@ -343,54 +365,4 @@ func Full(length int, fillValue float64) []float64 {
 		filledArray = append(filledArray, fillValue)
 	}
 	return filledArray
-}
-
-///// RANDOM NUMBER GENERATOR FUNCTIONS /////
-
-// Randn generates a 2D array of normally distributed random floats
-func Randn(rows, cols int) [][]float64 {
-	newArray := make([][]float64, rows)
-
-	for i := 0; i < rows; i++ {
-		newArray[i] = make([]float64, cols)
-		for j := 0; j < cols; j++ {
-			newArray[i][j] = rand.NormFloat64()
-		}
-	}
-	return newArray
-}
-
-// RndChoice generates a random integer from the given range according to a probability density function
-func RndChoice(rangeVal int, pdf []float64) int {
-
-	// Calculate the Cumulative Distribution Function
-	cdf := make([]float64, len(pdf))
-	cdf[0] = pdf[0]
-	for i := 1; i < len(pdf); i++ {
-		cdf[i] = cdf[i-1] + pdf[i]
-	}
-
-	randVal := rand.Float64()
-
-	// Select the index from the random value according to the cdf
-	index := 0
-	for randVal > cdf[index] {
-		index++
-	}
-
-	rangeArray := Arange(rangeVal)
-	return rangeArray[index]
-}
-
-// RndUniform produces a value between min and max from a uniform distribution
-func RndUniform(min float64, max float64) float64 {
-	return min + rand.Float64()*(max-min)
-}
-
-// RndShuffle -
-func RndShuffle(deck []int) []int {
-	rand.Shuffle(len(deck), func(i, j int) {
-		deck[i], deck[j] = deck[j], deck[i]
-	})
-	return deck
 }

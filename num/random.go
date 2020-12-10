@@ -4,8 +4,18 @@ import (
 	"math/rand"
 )
 
-// Randn generates a 2D array of normally distributed random floats
-func Randn(rows, cols int) [][]float64 {
+// Randn1 generates a 1D array of normally distributed random floats
+func Randn1(rows int) []float64 {
+	newArray := make([]float64, rows)
+
+	for i := 0; i < rows; i++ {
+		newArray[i] = rand.NormFloat64()
+	}
+	return newArray
+}
+
+// Randn2 generates a 2D array of normally distributed random floats
+func Randn2(rows, cols int) [][]float64 {
 	newArray := make([][]float64, rows)
 
 	for i := 0; i < rows; i++ {

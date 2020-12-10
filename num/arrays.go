@@ -39,8 +39,10 @@ func Unique(X [][]float64) ([][]float64, []int, []int) {
 
 	// Make a map to record the contents of each recorded row
 	keys := make(map[string]int)
+	indices := make(map[string]int)
 	indexU := 0
-	for i, values := range X {
+
+	for _, values := range X {
 		rowKey := SliceToString(values, ",")
 		// If this row of values has not been recorded yet
 		if _, value := keys[rowKey]; !value {
@@ -48,13 +50,15 @@ func Unique(X [][]float64) ([][]float64, []int, []int) {
 			keys[rowKey] = 1
 			rowKeys = append(rowKeys, rowKey)
 			U = append(U, values)
+			// Create a new index in U of this row
+			indices[rowKey] = indexU
 			indexU++
 		} else {
-			// Record the index of this duplicated row
-			I = append(I, i)
 			// Increment the total occurrences for this row
 			keys[rowKey]++
 		}
+		// Record the index in U for this row value
+		I = append(I, indices[rowKey])
 	}
 	// Compile the list of unique row totals
 	for _, rowKey := range rowKeys {
@@ -92,21 +96,6 @@ func FlatNonZero(array []bool) []int {
 	return nonZero
 }
 
-// ArrayCopy copies a 2D array of floats by value and returns the copy
-func ArrayCopy(array [][]float64) [][]float64 {
-	rows := len(array)
-	cols := len(array[0])
-
-	duplicate := make([][]float64, rows)
-	for i := 0; i < rows; i++ {
-		duplicate[i] = make([]float64, cols)
-		for j := 0; j < cols; j++ {
-			duplicate[i][j] = array[i][j]
-		}
-	}
-	return duplicate
-}
-
 // ArrayContains -
 func ArrayContains(array []bool, value bool) bool {
 	for _, element := range array {
@@ -128,6 +117,17 @@ func ArrayEqInt(array []int, value int) []bool {
 	return isEqual
 }
 
+// ArrayEqFloat compares an array of floats to a given value
+// Returned array elements are true if equal to value
+func ArrayEqFloat(array []float64, value float64) []bool {
+	var isEqual []bool
+
+	for _, element := range array {
+		isEqual = append(isEqual, (element == value))
+	}
+	return isEqual
+}
+
 // ArrayCompare compares two boolean arrays
 // Returns true if all array elements are equal
 func ArrayCompare(array1 []bool, array2 []bool) bool {
@@ -139,8 +139,19 @@ func ArrayCompare(array1 []bool, array2 []bool) bool {
 	return true
 }
 
-// ArrayLt compares an array of ints to a given value
-// Returned array elements are true if less than value
+// ArrayCompareFloat compares two float arrays
+// Returns true if all array elements are equal
+func ArrayCompareFloat(array1 []float64, array2 []float64) bool {
+	for i := range array1 {
+		if array1[i] != array2[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// ArrayLt compares two arrays of floats
+// Returned array elements are true if array1 less than array2
 func ArrayLt(array1 []float64, array2 []float64) []bool {
 	var isLt []bool
 
@@ -150,8 +161,8 @@ func ArrayLt(array1 []float64, array2 []float64) []bool {
 	return isLt
 }
 
-// ArrayGt compares an array of ints to a given value
-// Returned array elements are true if greater than value
+// ArrayGt compares two arrays of floats
+// Returned array elements are true if array1 greater than array2
 func ArrayGt(array1 []float64, array2 []float64) []bool {
 	var isGt []bool
 
@@ -161,7 +172,7 @@ func ArrayGt(array1 []float64, array2 []float64) []bool {
 	return isGt
 }
 
-// ArrayLeq compares an array of ints to a given value
+// ArrayLeq compares an array of floats to a given value
 // Returned array elements are true if less than or equal to value
 func ArrayLeq(array []float64, value float64) []bool {
 	var isLeq []bool
@@ -192,14 +203,36 @@ func ArrayNot(array []bool) []bool {
 	return inverseArray
 }
 
+// ArrayDuplicate copies a 2D array of floats by value and returns the copy
+func ArrayDuplicate(array [][]float64) [][]float64 {
+	rows := len(array)
+	cols := len(array[0])
+
+	duplicate := make([][]float64, rows)
+	for i := 0; i < rows; i++ {
+		duplicate[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			duplicate[i][j] = array[i][j]
+		}
+	}
+	return duplicate
+}
+
+// ArrayCopy copies array2 elements into array1
+func ArrayCopy(array1 []float64, array2 []float64) {
+	for i, element := range array2 {
+		array1[i] = element
+	}
+	//return array1
+}
+
 // ArrayCopyWhenTrue copies array2 elements into array1 where the bools array element is true
-func ArrayCopyWhenTrue(array1 []float64, array2 []float64, bools []bool) []float64 {
+func ArrayCopyWhenTrue(array1 []float64, array2 []float64, bools []bool) {
 	for i, element := range array2 {
 		if bools[i] {
 			array1[i] = element
 		}
 	}
-	return array1
 }
 
 // ArrayIndicesInt returns a slice containing array integers for the specified indices
@@ -365,4 +398,76 @@ func Full(length int, fillValue float64) []float64 {
 		filledArray = append(filledArray, fillValue)
 	}
 	return filledArray
+}
+
+// ArrayEmpty returns a zeroed array of the given shape
+func ArrayEmpty(rows int, cols int) [][]float64 {
+	array := make([][]float64, rows, cols)
+	for i := 0; i < rows; i++ {
+		array[i] = make([]float64, cols)
+	}
+	return array
+}
+
+// IsClose returns a boolean array where two arrays are element-wise equal within a tolerance
+func IsClose(array1 []float64, array2 []float64, tolerance float64) []bool {
+	var result []bool
+	for i, value := range array1 {
+		result = append(result, math.Abs(array2[i]-value) <= tolerance)
+	}
+	return result
+}
+
+// AllClose returns true if two arrays are element-wise equal within a tolerance
+func AllClose(array1 [][]float64, array2 [][]float64, tolerance float64) bool {
+	for i, rows := range array1 {
+		for j, value := range rows {
+			if math.Abs(array2[i][j]-value) > tolerance {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// AnyTrue returns true if any item in array1 equals corresponding item in array2
+func AnyTrue(array1 []float64, array2 []float64) bool {
+	for i, element := range array1 {
+		if array2[i] == element {
+			return true
+		}
+	}
+	return false
+}
+
+// AnyTrueBool returns true if any item in array is true
+func AnyTrueBool(array []bool) bool {
+	for _, element := range array {
+		if element {
+			return true
+		}
+	}
+	return false
+}
+
+// AllTrue returns true if all items in array are true
+func AllTrue(array []bool) bool {
+	for _, element := range array {
+		if !element {
+			return false
+		}
+	}
+	return true
+}
+
+// ArrayCumSum returns the cumulative sum of the elements in a list
+func ArrayCumSum(array []float64) []float64 {
+	accumulator := float64(0)
+	var result []float64
+
+	for _, element := range array {
+		accumulator += element
+		result = append(result, accumulator)
+	}
+	return result
 }

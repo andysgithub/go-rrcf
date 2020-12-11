@@ -45,7 +45,7 @@ func TestUnique(t *testing.T) {
 		{12, 13, 14, 15},
 	}
 
-	unique, removedIndices, duplicateTotals := Unique(duplicated)
+	unique, indicesMap, duplicateTotals := Unique(duplicated)
 
 	assert.Equal(t, len(unique[0]), 4, "There should be 4 unique rows.")
 	assert.Equal(t, unique[0], duplicated[0], "Unique row 0 should equal duplicated row 0")
@@ -53,8 +53,8 @@ func TestUnique(t *testing.T) {
 	assert.Equal(t, unique[2], duplicated[3], "Unique row 2 should equal duplicated row 3")
 	assert.Equal(t, unique[3], duplicated[7], "Unique row 3 should equal duplicated row 7")
 
-	expectedRemoved := []int{2, 4, 5, 6}
-	assert.Equal(t, removedIndices, expectedRemoved, "Incorrect removed indices")
+	expectedMap := []int{0, 1, 0, 2, 1, 0, 2, 3}
+	assert.Equal(t, indicesMap, expectedMap, "Indices map is incorrect")
 
 	expectedDuplicates := []int{3, 2, 2, 1}
 	assert.Equal(t, duplicateTotals, expectedDuplicates, "Incorrect duplicate totals")
@@ -68,18 +68,16 @@ func TestNoDuplicates(t *testing.T) {
 		{12, 13, 14, 15},
 	}
 
-	unique, removedIndices, duplicateTotals := Unique(duplicated)
-
-	//fmt.Printf("%v %v %v\n", unique, removedIndices, duplicateTotals)
+	unique, indicesMap, duplicateTotals := Unique(duplicated)
 
 	assert.Equal(t, len(unique[0]), 4, "There should be 4 unique rows.")
 	assert.Equal(t, unique[0], duplicated[0], "Unique row 0 should equal duplicated row 0")
 	assert.Equal(t, unique[1], duplicated[1], "Unique row 1 should equal duplicated row 1")
-	assert.Equal(t, unique[2], duplicated[2], "Unique row 2 should equal duplicated row 3")
-	assert.Equal(t, unique[3], duplicated[3], "Unique row 3 should equal duplicated row 7")
+	assert.Equal(t, unique[2], duplicated[2], "Unique row 2 should equal duplicated row 2")
+	assert.Equal(t, unique[3], duplicated[3], "Unique row 3 should equal duplicated row 3")
 
-	var expectedRemoved []int
-	assert.Equal(t, removedIndices, expectedRemoved, "Removed indices should be empty")
+	expectedMap := []int{0, 1, 2, 3}
+	assert.Equal(t, indicesMap, expectedMap, "Indices map is incorrect")
 
 	expectedDuplicates := []int{1, 1, 1, 1}
 	assert.Equal(t, duplicateTotals, expectedDuplicates, "Duplicate totals should have value 1")

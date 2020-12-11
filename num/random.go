@@ -54,6 +54,17 @@ func RndUniform(min float64, max float64) float64 {
 	return min + rand.Float64()*(max-min)
 }
 
+// RndUniformArray produces an array of values between min and max from a uniform distribution
+func RndUniformArray(min float64, max float64, rows int, cols int) [][]float64 {
+	rndArray := ArrayEmpty(rows, cols)
+	for i, row := range rndArray {
+		for j := range row {
+			rndArray[i][j] = min + rand.Float64()*(max-min)
+		}
+	}
+	return rndArray
+}
+
 // RndShuffle -
 func RndShuffle(deck []int) []int {
 	rand.Shuffle(len(deck), func(i, j int) {

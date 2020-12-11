@@ -17,12 +17,13 @@ var (
 	indexes             []int
 	n                   int
 	d                   int
+	X                   [][]float64
 )
 
 func TestInit(t *testing.T) {
 	n = 100
 	d = 3
-	X := num.Randn2(n, d)
+	X = num.Randn2(n, d)
 	Z := num.ArrayDuplicate(X)
 	Z = num.ArrayFillRows(Z, 90, 99, float64(1))
 
@@ -61,7 +62,7 @@ func TestBatch(t *testing.T) {
 }
 
 func TestCoDisp(t *testing.T) {
-	TestBatch(t)
+	TestInit(t)
 
 	for i := range [100]int{} {
 		codisp, _ := tree.CoDisp(i)
@@ -70,7 +71,7 @@ func TestCoDisp(t *testing.T) {
 }
 
 func TestDisp(t *testing.T) {
-	TestCoDisp(t)
+	TestInit(t)
 
 	for i := range [100]int{} {
 		disp, _ := tree.Disp(i)
@@ -79,7 +80,7 @@ func TestDisp(t *testing.T) {
 }
 
 func TestForgetBatch(t *testing.T) {
-	TestDisp(t)
+	TestInit(t)
 
 	// Check stored bounding boxes and leaf counts after forgetting points
 	for _, index := range indexes {
@@ -98,7 +99,7 @@ func TestForgetBatch(t *testing.T) {
 }
 
 func TestInsertBatch(t *testing.T) {
-	TestForgetBatch(t)
+	TestInit(t)
 
 	// Check stored bounding boxes and leaf counts after inserting points
 	for _, index := range indexes {
@@ -120,10 +121,9 @@ func TestInsertBatch(t *testing.T) {
 }
 
 func TestBatchWithDuplicates(t *testing.T) {
-	TestInsertBatch(t)
-
+	TestInit(t)
 	// Instantiate tree with 10 duplicates
-	leafCount := duplicateTree.CountLeaves(tree.root)
+	leafCount := duplicateTree.CountLeaves(duplicateTree.root)
 	assert.Equal(t, leafCount, n, fmt.Sprintf("Leaf count %d not equal to samples %d\n", leafCount, n))
 
 	for i := 90; i < 100; i++ {
@@ -133,28 +133,59 @@ func TestBatchWithDuplicates(t *testing.T) {
 }
 
 func TestInsertDuplicate(t *testing.T) {
+	TestInit(t)
+	// Insert duplicate point
+	point := []float64{1., 1., 1.}
+	leaf, _ := duplicateTree.InsertPoint(point, 100, 0)
+	assert.Equal(t, leaf.n, 11, "Leaf count %d in duplicate tree not equal to 11\n", leaf.n)
+	for i := 90; i < 100; i++ {
+		message := fmt.Sprintf("Leaf count %d in duplicate tree not equal to 11\n", duplicateTree.leaves[i].n)
+		assert.Equal(t, duplicateTree.leaves[i].n, 11, message)
+	}
 }
 
 func TestFindDuplicate(t *testing.T) {
+	TestInsertDuplicate(t)
+	// Find duplicate point
+	point := []float64{1., 1., 1.}
+	duplicate := duplicateTree.FindDuplicate(point, 0)
+	assert.NotNil(t, duplicate, "Duplicate in duplicate tree is nil\n")
 }
 
 func TestForgetDuplicate(t *testing.T) {
+	TestFindDuplicate(t)
+	// Forget duplicate point
+	duplicateTree.ForgetPoint(100)
+	for i := 90; i < 100; i++ {
+		message := fmt.Sprintf("Leaf count %d in duplicate tree not equal to 10\n", duplicateTree.leaves[i].n)
+		assert.Equal(t, duplicateTree.leaves[i].n, 10, message)
+	}
 }
 
 func TestShingle(t *testing.T) {
-}
+	TestInit(t)
+	shingle := NewShingle(X, 3)
+	step0 := shingle.Next()
+	step1 := shingle.Next()
 
-func TestRandomState(t *testing.T) {
+	message := fmt.Sprintf("Shingles misaligned: %v vs %v", step0[1], step1[0])
+	assert.True(t, num.ArrayCompareFloat(step0[1], step1[0]), message)
 }
 
 func TestInsertDepth(t *testing.T) {
-}
+	tree = RCTree()
 
-func TestToDict(t *testing.T) {
-}
+	tree.InsertPoint([]float64{0., 0.}, 0, 0)
+	tree.InsertPoint([]float64{0., 0.}, 1, 0)
+	tree.InsertPoint([]float64{0., 0.}, 2, 0)
+	tree.InsertPoint([]float64{0., 1.}, 3, 0)
+	tree.ForgetPoint(3)
 
-func TestFromDict(t *testing.T) {
-}
-
-func TestPrint(t *testing.T) {
+	minDepth := math.MaxInt64
+	for _, node := range tree.leaves {
+		if node.leaf.d < minDepth {
+			minDepth = node.leaf.d
+		}
+	}
+	assert.GreaterOrEqual(t, minDepth, 0)
 }

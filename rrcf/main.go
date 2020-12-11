@@ -489,31 +489,6 @@ func (rrcf RRCF) FindDuplicate(point []float64, tolerance float64) *Node {
 	return nil
 }
 
-// ToDict -
-func (rrcf RRCF) ToDict() {
-
-}
-
-// Serialise -
-func (rrcf RRCF) Serialise() {
-
-}
-
-// LoadDict -
-func (rrcf RRCF) LoadDict() {
-
-}
-
-// Deserialise -
-func (rrcf RRCF) Deserialise() {
-
-}
-
-// FromDict -
-func (rrcf RRCF) FromDict() {
-
-}
-
 // lrBranchBbox computes the bbox of a node based on bboxes of the node's children
 func lrBranchBbox(branchNode *Node) [][]float64 {
 	var bbLeft, bbRight, bbLastLeft, bbLastRight []float64

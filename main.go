@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"sort"
@@ -15,7 +14,7 @@ func main() {
 	plotPoints := StreamingTrial()
 	utils.WriteFile(plotPoints, "results/streaming/plot_points.csv")
 
-	plotPoints := BatchTrial()
+	plotPoints = BatchTrial()
 	utils.WriteFile(plotPoints, "results/batch/plot_points.csv")
 }
 
@@ -45,8 +44,7 @@ func StreamingTrial() [][]float64 {
 	// Create a forest of empty trees
 	var forest []rrcf.RCTree
 	for range make([]int, numTrees) {
-		tree := rrcf.NewRCTree()
-		tree.Init(nil, nil, 9, 0)
+		tree := rrcf.NewRCTree(nil, nil, 9, 0)
 		forest = append(forest, tree)
 	}
 
@@ -124,7 +122,7 @@ func BatchTrial() [][]float64 {
 		cols := sampleSizeRange[1]
 		ixs := num.RndArray(n, rows, cols)
 		for _, ix := range ixs[0 : rows-1] {
-			tree := rrcf.NewRCTree()
+			tree := rrcf.NewRCTree(nil, nil, 0, 0)
 			// Produce a new array as sampled rows from X
 			sampledX := num.ArraySample(X, ix)
 			tree.Init(sampledX, ix, 9, 0)
@@ -161,8 +159,6 @@ func BatchTrial() [][]float64 {
 	// Compile points for plotting
 	values := sortMap(avgCodisp)
 	threshold := values[len(values)-10]
-
-	fmt.Printf("threshold: %f", threshold)
 
 	totalPoints := len(X)
 	plotPoints := num.ArrayEmpty(totalPoints, 5)

@@ -96,16 +96,6 @@ func FlatNonZero(array []bool) []int {
 	return nonZero
 }
 
-// ArrayContains -
-func ArrayContains(array []bool, value bool) bool {
-	for _, element := range array {
-		if element == value {
-			return true
-		}
-	}
-	return false
-}
-
 // ArrayEqInt compares an array of ints to a given value
 // Returned array elements are true if equal to value
 func ArrayEqInt(array []int, value int) []bool {
@@ -523,10 +513,20 @@ func AllClose(array1 [][]float64, array2 [][]float64, tolerance float64) bool {
 	return true
 }
 
-// AnyTrue returns true if any item in array1 equals corresponding item in array2
-func AnyTrue(array1 []float64, array2 []float64) bool {
+// AnyEqFloat returns true if any item in array1 equals corresponding item in array2
+func AnyEqFloat(array1 []float64, array2 []float64) bool {
 	for i, value := range array1 {
 		if array2[i] == value {
+			return true
+		}
+	}
+	return false
+}
+
+// ArrayContainsBool returns true if the boolean array contains the boolean value
+func ArrayContainsBool(array []bool, value bool) bool {
+	for _, element := range array {
+		if element == value {
 			return true
 		}
 	}
@@ -543,8 +543,8 @@ func AnyTrueBool(array []bool) bool {
 	return false
 }
 
-// AllTrue returns true if all items in array are true
-func AllTrue(array []bool) bool {
+// AllTrueBool returns true if all items in array are true
+func AllTrueBool(array []bool) bool {
 	for _, value := range array {
 		if !value {
 			return false

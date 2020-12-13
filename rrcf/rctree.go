@@ -27,13 +27,14 @@ type RCTree struct {
 }
 
 // NewRCTree returns a new random cut forest
-func NewRCTree() RCTree {
+func NewRCTree(X [][]float64, indexLabels []int, precision int, randomState interface{}) RCTree {
 	rand.Seed(time.Now().UTC().UnixNano())
 	rcTree := RCTree{
 		make(map[int]*Node),
 		nil, 0, nil, nil,
 	}
 
+	rcTree.Init(X, indexLabels, precision, randomState)
 	return rcTree
 }
 
@@ -480,7 +481,7 @@ func (rcTree *RCTree) FindDuplicate(point []float64, tolerance float64) *Node {
 		}
 	} else {
 		result := num.IsClose(nearest.Leaf.x, point, tolerance)
-		if num.AllTrue(result) {
+		if num.AllTrueBool(result) {
 			return nearest
 		}
 	}
@@ -590,7 +591,7 @@ func (rcTree *RCTree) RelaxBboxUpwards(node *Node, point []float64) {
 	for node != nil {
 		bbox := lrBranchBbox(node)
 		lastIndex := len(node.b) - 1
-		if !(num.AnyTrue(node.b[0][:], point) || num.AnyTrue(node.b[lastIndex][:], point)) {
+		if !(num.AnyEq(node.b[0][:], point) || num.AnyEqFloat(node.b[lastIndex][:], point)) {
 			break
 		}
 		num.ArrayCopy(node.b[0][:], bbox[0][:])

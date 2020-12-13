@@ -27,11 +27,9 @@ func TestInit(t *testing.T) {
 	Z := num.ArrayDuplicate(X)
 	num.ArrayFillRows(Z, 90, 99, float64(1))
 
-	tree = NewRCTree()
-	tree.Init(X, nil, 9, 0)
+	tree = NewRCTree(X, nil, 9, 0)
 
-	duplicateTree = NewRCTree()
-	duplicateTree.Init(Z, nil, 9, 0)
+	duplicateTree = NewRCTree(Z, nil, 9, 0)
 
 	deck := num.Arange(n)
 	deck = num.RndShuffle(deck)
@@ -173,7 +171,7 @@ func TestShingle(t *testing.T) {
 }
 
 func TestInsertDepth(t *testing.T) {
-	tree = NewRCTree()
+	tree = NewRCTree(nil, nil, 0, 0)
 
 	tree.InsertPoint([]float64{0., 0.}, 0, 0)
 	tree.InsertPoint([]float64{0., 0.}, 1, 0)

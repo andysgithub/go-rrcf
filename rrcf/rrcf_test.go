@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	tree                RRCF
-	duplicateTree       RRCF
-	treeSeeded          RRCF
-	duplicateTreeSeeded RRCF
+	tree                RCTree
+	duplicateTree       RCTree
+	treeSeeded          RCTree
+	duplicateTreeSeeded RCTree
 	indexes             []int
 	n                   int
 	d                   int
@@ -25,12 +25,12 @@ func TestInit(t *testing.T) {
 	d = 3
 	X = num.Randn2(n, d)
 	Z := num.ArrayDuplicate(X)
-	Z = num.ArrayFillRows(Z, 90, 99, float64(1))
+	num.ArrayFillRows(Z, 90, 99, float64(1))
 
-	tree = RCTree()
+	tree = NewRCTree()
 	tree.Init(X, nil, 9, 0)
 
-	duplicateTree = RCTree()
+	duplicateTree = NewRCTree()
 	duplicateTree.Init(Z, nil, 9, 0)
 
 	deck := num.Arange(n)
@@ -44,8 +44,8 @@ func TestBatch(t *testing.T) {
 	var branches []Node
 
 	// Check stored bounding boxes and leaf counts after instantiating from batch
-	branches = tree.MapBranches(tree.root, branches)
-	leafcount := tree.CountLeaves(tree.root)
+	branches = tree.MapBranches(tree.Root, branches)
+	leafcount := tree.CountLeaves(tree.Root)
 	assert.Equal(t, leafcount, 100, "Wrong number of total leaves")
 
 	for _, node := range branches {
@@ -55,7 +55,7 @@ func TestBatch(t *testing.T) {
 
 		for i := 0; i < len(bbox); i++ {
 			for j := 0; j < len(bbox[0]); j++ {
-				assert.Equal(t, bbox[i][j], node.branch.b[i][j], "Wrong bounding box value for branch")
+				assert.Equal(t, bbox[i][j], node.b[i][j], "Wrong bounding box value for branch")
 			}
 		}
 	}
@@ -86,14 +86,14 @@ func TestForgetBatch(t *testing.T) {
 	for _, index := range indexes {
 		forgotten := tree.ForgetPoint(index)
 		var branches []Node
-		branches = tree.MapBranches(tree.root, branches)
+		branches = tree.MapBranches(tree.Root, branches)
 		for _, node := range branches {
 			leafcount := tree.CountLeaves(&node)
-			assert.Equal(t, leafcount, node.n, fmt.Sprintf("%f - Computed: %d  Stored: %d\n", forgotten.leaf.x, leafcount, node.n))
+			assert.Equal(t, leafcount, node.n, fmt.Sprintf("%f - Computed: %d  Stored: %d\n", forgotten.Leaf.x, leafcount, node.n))
 
 			bbox := tree.GetBbox(&node)
-			result := num.AllClose(bbox, node.branch.b, math.Pow(10, -8))
-			assert.True(t, result, fmt.Sprintf("%f - Computed: %d  Stored: %d\n", forgotten.leaf.x, leafcount, node.n))
+			result := num.AllClose(bbox, node.b, math.Pow(10, -8))
+			assert.True(t, result, fmt.Sprintf("%f - Computed: %d  Stored: %d\n", forgotten.Leaf.x, leafcount, node.n))
 		}
 	}
 }
@@ -107,14 +107,14 @@ func TestInsertBatch(t *testing.T) {
 		_, err := tree.InsertPoint(x, index, 0)
 		if err == nil {
 			var branches []Node
-			branches = tree.MapBranches(tree.root, branches)
+			branches = tree.MapBranches(tree.Root, branches)
 			for _, node := range branches {
 				leafCount := tree.CountLeaves(&node)
 				assert.Equal(t, leafCount, node.n, fmt.Sprintf("Computed: %d  Stored: %d\n", leafCount, node.n))
 
 				bbox := tree.GetBbox(&node)
-				result := num.AllClose(bbox, node.branch.b, math.Pow(10, -8))
-				assert.True(t, result, fmt.Sprintf("Computed: %v  Stored: %v\n", bbox, node.branch.b))
+				result := num.AllClose(bbox, node.b, math.Pow(10, -8))
+				assert.True(t, result, fmt.Sprintf("Computed: %v  Stored: %v\n", bbox, node.b))
 			}
 		}
 	}
@@ -123,12 +123,12 @@ func TestInsertBatch(t *testing.T) {
 func TestBatchWithDuplicates(t *testing.T) {
 	TestInit(t)
 	// Instantiate tree with 10 duplicates
-	leafCount := duplicateTree.CountLeaves(duplicateTree.root)
+	leafCount := duplicateTree.CountLeaves(duplicateTree.Root)
 	assert.Equal(t, leafCount, n, fmt.Sprintf("Leaf count %d not equal to samples %d\n", leafCount, n))
 
 	for i := 90; i < 100; i++ {
-		message := fmt.Sprintf("Leaf count %d in duplicate tree not equal to 10\n", duplicateTree.leaves[i].n)
-		assert.Equal(t, duplicateTree.leaves[i].n, 10, message)
+		message := fmt.Sprintf("Leaf count %d in duplicate tree not equal to 10\n", duplicateTree.Leaves[i].n)
+		assert.Equal(t, duplicateTree.Leaves[i].n, 10, message)
 	}
 }
 
@@ -139,8 +139,8 @@ func TestInsertDuplicate(t *testing.T) {
 	leaf, _ := duplicateTree.InsertPoint(point, 100, 0)
 	assert.Equal(t, leaf.n, 11, "Leaf count %d in duplicate tree not equal to 11\n", leaf.n)
 	for i := 90; i < 100; i++ {
-		message := fmt.Sprintf("Leaf count %d in duplicate tree not equal to 11\n", duplicateTree.leaves[i].n)
-		assert.Equal(t, duplicateTree.leaves[i].n, 11, message)
+		message := fmt.Sprintf("Leaf count %d in duplicate tree not equal to 11\n", duplicateTree.Leaves[i].n)
+		assert.Equal(t, duplicateTree.Leaves[i].n, 11, message)
 	}
 }
 
@@ -157,8 +157,8 @@ func TestForgetDuplicate(t *testing.T) {
 	// Forget duplicate point
 	duplicateTree.ForgetPoint(100)
 	for i := 90; i < 100; i++ {
-		message := fmt.Sprintf("Leaf count %d in duplicate tree not equal to 10\n", duplicateTree.leaves[i].n)
-		assert.Equal(t, duplicateTree.leaves[i].n, 10, message)
+		message := fmt.Sprintf("Leaf count %d in duplicate tree not equal to 10\n", duplicateTree.Leaves[i].n)
+		assert.Equal(t, duplicateTree.Leaves[i].n, 10, message)
 	}
 }
 
@@ -173,7 +173,7 @@ func TestShingle(t *testing.T) {
 }
 
 func TestInsertDepth(t *testing.T) {
-	tree = RCTree()
+	tree = NewRCTree()
 
 	tree.InsertPoint([]float64{0., 0.}, 0, 0)
 	tree.InsertPoint([]float64{0., 0.}, 1, 0)
@@ -182,9 +182,9 @@ func TestInsertDepth(t *testing.T) {
 	tree.ForgetPoint(3)
 
 	minDepth := math.MaxInt64
-	for _, node := range tree.leaves {
-		if node.leaf.d < minDepth {
-			minDepth = node.leaf.d
+	for _, node := range tree.Leaves {
+		if node.Leaf.d < minDepth {
+			minDepth = node.Leaf.d
 		}
 	}
 	assert.GreaterOrEqual(t, minDepth, 0)

@@ -49,6 +49,25 @@ func RndChoice(rangeVal int, pdf []float64) int {
 	return rangeArray[index]
 }
 
+// RndArray generates a 2D array of random integers from a collection in a given range without replacement
+func RndArray(rangeVal int, rows int, cols int) [][]int {
+	s := Arange(rangeVal)
+
+	rndArray := make([][]int, rows)
+	for i := 0; i < rows; i++ {
+		rndArray[i] = make([]int, cols)
+		for j := 0; j < cols; j++ {
+			total := len(s)
+			index := rand.Intn(total)
+			rndArray[i][j] = s[index]
+
+			s[index] = s[total-1]
+			s = s[:total-1]
+		}
+	}
+	return rndArray
+}
+
 // RndUniform produces a value between min and max from a uniform distribution
 func RndUniform(min float64, max float64) float64 {
 	return min + rand.Float64()*(max-min)

@@ -1,57 +1,57 @@
 package rrcf
 
 // MapLeaves traverses the tree recursively, calling Accumulate on leaves
-func (rrcf RRCF) MapLeaves(node *Node, accumulator *int) {
+func (rcTree RCTree) MapLeaves(node *Node, accumulator *int) {
 	if node.isBranch() {
-		if node.branch.l != nil {
-			rrcf.MapLeaves(node.branch.l, accumulator)
+		if node.Branch.l != nil {
+			rcTree.MapLeaves(node.Branch.l, accumulator)
 		}
-		if node.branch.r != nil {
-			rrcf.MapLeaves(node.branch.r, accumulator)
+		if node.Branch.r != nil {
+			rcTree.MapLeaves(node.Branch.r, accumulator)
 		}
 	} else {
-		rrcf.Accumulate(node, accumulator)
+		rcTree.Accumulate(node, accumulator)
 	}
 }
 
 // MapBranches traverses the tree recursively, calling GetNodes on branches
-func (rrcf RRCF) MapBranches(node *Node, branches []Node) []Node {
+func (rcTree RCTree) MapBranches(node *Node, branches []Node) []Node {
 	if node.isBranch() {
-		if node.branch.l != nil {
-			branches = rrcf.MapBranches(node.branch.l, branches)
+		if node.Branch.l != nil {
+			branches = rcTree.MapBranches(node.Branch.l, branches)
 		}
-		if node.branch.r != nil {
-			branches = rrcf.MapBranches(node.branch.r, branches)
+		if node.Branch.r != nil {
+			branches = rcTree.MapBranches(node.Branch.r, branches)
 		}
-		branches = rrcf.GetNodes(node, branches)
+		branches = rcTree.GetNodes(node, branches)
 	}
 	return branches
 }
 
 // MapBboxes traverses the tree recursively, calling GetBbox on leaves
-func (rrcf RRCF) MapBboxes(node *Node, mins []float64, maxes []float64) {
+func (rcTree RCTree) MapBboxes(node *Node, mins []float64, maxes []float64) {
 	if node.isBranch() {
-		if node.branch.l != nil {
-			rrcf.MapBboxes(node.branch.l, mins, maxes)
+		if node.Branch.l != nil {
+			rcTree.MapBboxes(node.Branch.l, mins, maxes)
 		}
-		if node.branch.r != nil {
-			rrcf.MapBboxes(node.branch.r, mins, maxes)
+		if node.Branch.r != nil {
+			rcTree.MapBboxes(node.Branch.r, mins, maxes)
 		}
 	} else {
-		rrcf.ComputeBbox(node, mins, maxes)
+		rcTree.ComputeBbox(node, mins, maxes)
 	}
 }
 
 // MapDepths traverses the tree recursively, calling IncrementDepth on leaves
-func (rrcf RRCF) MapDepths(node *Node, inc int) {
+func (rcTree RCTree) MapDepths(node *Node, inc int) {
 	if node.isBranch() {
-		if node.branch.l != nil {
-			rrcf.MapDepths(node.branch.l, inc)
+		if node.Branch.l != nil {
+			rcTree.MapDepths(node.Branch.l, inc)
 		}
-		if node.branch.r != nil {
-			rrcf.MapDepths(node.branch.r, inc)
+		if node.Branch.r != nil {
+			rcTree.MapDepths(node.Branch.r, inc)
 		}
 	} else {
-		rrcf.IncrementDepth(node, inc)
+		rcTree.IncrementDepth(node, inc)
 	}
 }

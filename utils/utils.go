@@ -6,12 +6,12 @@ import (
 	"os"
 )
 
-// WriteFile saves a 2D array of floats to a csv file
-func WriteFile(rndData [][]float64, fileName string) {
+// WriteFile2D saves a 2D array of floats to a csv file
+func WriteFile(data [][]float64, fileName string) {
 	csvFile, _ := os.Create(fileName)
 	csvwriter := csv.NewWriter(csvFile)
 
-	for _, dataRow := range rndData {
+	for _, dataRow := range data {
 
 		var stringRow []string
 		for _, value := range dataRow {
@@ -19,12 +19,13 @@ func WriteFile(rndData [][]float64, fileName string) {
 			stringRow = append(stringRow, strVal)
 		}
 
-		_ = csvwriter.Write(stringRow)
+		csvwriter.Write(stringRow)
 	}
 
 	csvwriter.Flush()
 }
 
+// Min -
 func Min(a, b float64) float64 {
 	if a < b {
 		return a
@@ -32,6 +33,7 @@ func Min(a, b float64) float64 {
 	return b
 }
 
+// Max -
 func Max(a, b float64) float64 {
 	if a > b {
 		return a

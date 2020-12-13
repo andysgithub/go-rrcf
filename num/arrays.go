@@ -341,12 +341,92 @@ func ArraySub(array1 []float64, array2 []float64) []float64 {
 	return returnSlice
 }
 
-// ArrayDiv returns the elements of a list divided by the specified value
-func ArrayDiv(array []float64, divisor float64) []float64 {
+// ArraySubVal subtracts the specified value from the elements of a list
+func ArraySubVal(array []float64, value float64) []float64 {
 	var returnSlice []float64
 
-	for i := range array {
-		returnSlice = append(returnSlice, array[i]/divisor)
+	for _, element := range array {
+		returnSlice = append(returnSlice, element-value)
+	}
+	return returnSlice
+}
+
+// ArrayMul returns the product of the elements of two lists
+func ArrayMul(array1 []float64, array2 []float64) []float64 {
+	var returnSlice []float64
+
+	for i := range array1 {
+		returnSlice = append(returnSlice, array1[i]*array2[i])
+	}
+	return returnSlice
+}
+
+// ArrayMulVal returns the elements of a list multiplied by the specified value
+func ArrayMulVal(array []float64, value float64) []float64 {
+	var returnSlice []float64
+
+	for _, element := range array {
+		returnSlice = append(returnSlice, element*value)
+	}
+	return returnSlice
+}
+
+// Array2DMulVal returns the elements of a 2D array multiplied by the specified value
+func Array2DMulVal(array [][]float64, value float64) [][]float64 {
+	rows := len(array)
+	cols := len(array[0])
+
+	result := make([][]float64, rows)
+	for i := 0; i < rows; i++ {
+		result[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			result[i][j] = array[i][j] * value
+		}
+	}
+	return result
+}
+
+// ArrayIntMulVal returns the elements of a integer list multiplied by the specified float value
+func ArrayIntMulVal(array []int, value float64) []float64 {
+	var returnSlice []float64
+
+	for _, element := range array {
+		returnSlice = append(returnSlice, float64(element)*value)
+	}
+	return returnSlice
+}
+
+// Array2DAddVal returns the sum of two 2D arrays
+func Array2DAddVal(array1 [][]float64, array2 [][]float64) [][]float64 {
+	rows := len(array1)
+	cols := len(array1[0])
+
+	result := make([][]float64, rows)
+	for i := 0; i < rows; i++ {
+		result[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			result[i][j] = array1[i][j] + array2[i][j]
+		}
+	}
+	return result
+}
+
+// ArrayAddVal returns the elements of a list multiplied by the specified value
+func ArrayAddVal(array []float64, value float64) []float64 {
+	var returnSlice []float64
+
+	for _, element := range array {
+		returnSlice = append(returnSlice, element+value)
+	}
+	return returnSlice
+}
+
+// ArrayDivVal returns the elements of a list divided by the specified value
+func ArrayDivVal(array []float64, value float64) []float64 {
+	var returnSlice []float64
+
+	for _, element := range array {
+		returnSlice = append(returnSlice, element/value)
 	}
 	return returnSlice
 }
@@ -360,14 +440,27 @@ func GetColumn(array [][]float64, columnIndex int) []float64 {
 	return column
 }
 
+// ArrayFillElements fills the elements of a list with the specified value
+func ArrayFillElements(array []float64, rowStart int, rowEnd int, value float64) {
+	for i := rowStart; i <= rowEnd; i++ {
+		array[i] = value
+	}
+}
+
 // ArrayFillRows fills array rows with the specified value
-func ArrayFillRows(array [][]float64, rowStart int, rowEnd int, value float64) [][]float64 {
+func ArrayFillRows(array [][]float64, rowStart int, rowEnd int, value float64) {
 	for i := rowStart; i <= rowEnd; i++ {
 		for j := 0; j < len(array[0]); j++ {
 			array[i][j] = value
 		}
 	}
-	return array
+}
+
+// ArrayFillColumn fills array column with the specified value
+func ArrayFillColumn(array [][]float64, col int, rowStart int, rowEnd int, value float64) {
+	for i := rowStart; i <= rowEnd; i++ {
+		array[i][col] = value
+	}
 }
 
 // ArraySumBool totals the true values in the list
@@ -400,9 +493,9 @@ func Full(length int, fillValue float64) []float64 {
 	return filledArray
 }
 
-// ArrayEmpty returns a zeroed array of the given shape
+// ArrayEmpty returns a zeroed 2D array
 func ArrayEmpty(rows int, cols int) [][]float64 {
-	array := make([][]float64, rows, cols)
+	array := make([][]float64, rows)
 	for i := 0; i < rows; i++ {
 		array[i] = make([]float64, cols)
 	}
@@ -432,8 +525,8 @@ func AllClose(array1 [][]float64, array2 [][]float64, tolerance float64) bool {
 
 // AnyTrue returns true if any item in array1 equals corresponding item in array2
 func AnyTrue(array1 []float64, array2 []float64) bool {
-	for i, element := range array1 {
-		if array2[i] == element {
+	for i, value := range array1 {
+		if array2[i] == value {
 			return true
 		}
 	}
@@ -442,8 +535,8 @@ func AnyTrue(array1 []float64, array2 []float64) bool {
 
 // AnyTrueBool returns true if any item in array is true
 func AnyTrueBool(array []bool) bool {
-	for _, element := range array {
-		if element {
+	for _, value := range array {
+		if value {
 			return true
 		}
 	}
@@ -452,8 +545,8 @@ func AnyTrueBool(array []bool) bool {
 
 // AllTrue returns true if all items in array are true
 func AllTrue(array []bool) bool {
-	for _, element := range array {
-		if !element {
+	for _, value := range array {
+		if !value {
 			return false
 		}
 	}
@@ -465,9 +558,55 @@ func ArrayCumSum(array []float64) []float64 {
 	accumulator := float64(0)
 	var result []float64
 
-	for _, element := range array {
-		accumulator += element
+	for _, value := range array {
+		accumulator += value
 		result = append(result, accumulator)
 	}
 	return result
+}
+
+// ArraySin returns the sine of the elements in a list
+func ArraySin(array []float64) []float64 {
+	var result []float64
+
+	for _, value := range array {
+		result = append(result, math.Sin(value))
+	}
+	return result
+}
+
+// ArrayReshapeRow converts a list into a 2D array with one row
+func ArrayReshapeRow(array []float64) [][]float64 {
+	result := ArrayEmpty(1, len(array))
+
+	for i, value := range array {
+		result[0][i] = value
+	}
+	return result
+}
+
+// ArrayReshapeCol converts a list into a 2D array with one column
+func ArrayReshapeCol(array []float64) [][]float64 {
+	result := ArrayEmpty(len(array), 1)
+
+	for i, value := range array {
+		result[i][0] = value
+	}
+	return result
+}
+
+// ArraySample produces a 2D array consisting of sampled rows from the original array
+func ArraySample(array [][]float64, samples []int) [][]float64 {
+	rows := len(samples)
+	cols := len(array[0])
+
+	sampled := make([][]float64, rows)
+	for i := 0; i < rows; i++ {
+		sampled[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			row := samples[i]
+			sampled[i][j] = array[row][j]
+		}
+	}
+	return sampled
 }

@@ -2,7 +2,7 @@ package rrcf
 
 ///// 2D VERSION /////
 
-// Shingle generates shingles (a rolling window) of a given size
+// Shingle generates shingles (a rolling window) of a given size from a 2D array
 type Shingle struct {
 	Sequence [][]float64
 	Size     int
@@ -33,7 +33,7 @@ func (shingle Shingle) Next() [][]float64 {
 
 ///// 1D VERSION /////
 
-// ShingleList generates shingles (a rolling window) of a given size
+// ShingleList generates shingles (a rolling window) of a given size from a list
 type ShingleList struct {
 	Sequence []float64
 	Size     int

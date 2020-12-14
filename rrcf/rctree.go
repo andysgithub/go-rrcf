@@ -1,20 +1,14 @@
 package rrcf
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"math"
 	"math/rand"
-	"os"
 	"time"
 
+	"github.com/andysgithub/go-rrcf/logging"
 	"github.com/andysgithub/go-rrcf/num"
-)
-
-var (
-	logMain    *os.File
-	bufferMain bytes.Buffer
 )
 
 // RCTree - Robust Random Cut Forest
@@ -24,29 +18,24 @@ type RCTree struct {
 	Ndim        int           // Dimension of points in the tree
 	IndexLabels []int         // Index labels
 	Parent      *Node         // Parent of the current node
+	Log         *logging.Logger
 }
 
 // NewRCTree returns a new random cut forest
 func NewRCTree(X [][]float64, indexLabels []int, precision int, randomState interface{}) RCTree {
 	rand.Seed(time.Now().UTC().UnixNano())
-	rcTree := RCTree{
+	rct := RCTree{
 		make(map[int]*Node),
 		nil, 0, nil, nil,
+		logging.NewLogger("logs/rctree.log"),
 	}
 
-	rcTree.Init(X, indexLabels, precision, randomState)
-	return rcTree
+	rct.Init(X, indexLabels, precision, randomState)
+	return rct
 }
 
 // Init - Initialises the random cut forest
-func (rcTree *RCTree) Init(X [][]float64, indexLabels []int, precision int, randomState interface{}) {
-	os.Remove("logs/rctree.log")
-	file, err := os.OpenFile("logs/rctree.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err == nil {
-		defer logMain.Close()
-		logMain = file
-	}
-
+func (rct *RCTree) Init(X [][]float64, indexLabels []int, precision int, randomState interface{}) {
 	switch randomState.(type) {
 	case int:
 		// Random number generation with provided seed
@@ -59,7 +48,7 @@ func (rcTree *RCTree) Init(X [][]float64, indexLabels []int, precision int, rand
 		if indexLabels == nil {
 			indexLabels = num.Arange(len(X))
 		}
-		rcTree.IndexLabels = indexLabels
+		rct.IndexLabels = indexLabels
 
 		// Remove duplicated rows
 		X, I, N := num.Unique(X)
@@ -67,46 +56,42 @@ func (rcTree *RCTree) Init(X [][]float64, indexLabels []int, precision int, rand
 		dataRows := len(X)
 		dataCols := len(X[0])
 
-		bufferMain.Reset()
-		bufferMain.WriteString("\n-------- Tree Build Start --------\n")
-		bufferMain.WriteString(fmt.Sprintf("Rows: %d  Cols: %d\n", dataRows, dataCols))
-		fmt.Fprintln(logMain, bufferMain.String())
+		rct.Log.Section("\n-------- Tree Build Start --------\n")
+		rct.Log.AddLast(fmt.Sprintf("Rows: %d  Cols: %d\n", dataRows, dataCols))
 
 		// Store dimension of dataset
-		rcTree.Ndim = dataCols
+		rct.Ndim = dataCols
 
 		// Set node above to nil in case of bottom-up search
-		rcTree.Parent = nil
+		rct.Parent = nil
 
 		// Create RRC Tree
 		S := num.OnesBool(dataRows)
-		rcTree.MakeTree(X, S, N, I, rcTree.Root, "root", 0)
+		rct.MakeTree(X, S, N, I, rct.Root, "root", 0)
 
 		// Remove parent of root
-		rcTree.Root.u = nil
+		rct.Root.u = nil
 		// Count all leaves under each branch
-		rcTree.CountAllTopDown(rcTree.Root)
+		rct.CountAllTopDown(rct.Root)
 		// Set bboxes of all branches
-		rcTree.GetBboxTopDown(rcTree.Root)
+		rct.GetBboxTopDown(rct.Root)
 	}
 }
 
 // MakeTree generates a random cut tree
-func (rcTree *RCTree) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *Node, side string, depth int) {
+func (rct *RCTree) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *Node, side string, depth int) {
 
-	bufferMain.Reset()
-	bufferMain.WriteString("\nCreate Branch\n")
-	bufferMain.WriteString(fmt.Sprintf("Side: %s  Depth: %d\n", side, depth))
-	fmt.Fprintln(logMain, bufferMain.String())
+	rct.Log.Section("\nCreate Branch\n")
+	rct.Log.AddLast(fmt.Sprintf("Side: %s  Depth: %d\n", side, depth))
 
 	// Increment depth as we traverse down
 	depth++
 	// Create a cut according to definition 1
-	S1, S2, node := rcTree.Cut(X, S, parent, side)
+	S1, S2, node := rct.Cut(X, S, parent, side)
 	// If S1 does not contain an isolated point
 	if num.ArraySumBool(S1) > 1 {
 		// Recursively construct tree on S1
-		rcTree.MakeTree(X, S1, N, I, node, "l", depth)
+		rct.MakeTree(X, S1, N, I, node, "l", depth)
 	} else {
 		// Create a leaf node from the isolated point
 		i := int(num.AsScalar(num.FlatNonZero(S1)))
@@ -118,19 +103,19 @@ func (rcTree *RCTree) MakeTree(X [][]float64, S []bool, N []int, I []int, parent
 			// Add a key in the leaves map pointing to leaf for all duplicate indices
 			J := num.FlatNonZero(num.ArrayEqInt(I, i))
 			// Get index label
-			J = num.ArrayIndicesInt(rcTree.IndexLabels, J)
+			J = num.ArrayIndicesInt(rct.IndexLabels, J)
 			for _, j := range J {
-				rcTree.Leaves[j] = leaf
+				rct.Leaves[j] = leaf
 			}
 		} else {
-			i = rcTree.IndexLabels[i]
-			rcTree.Leaves[i] = leaf
+			i = rct.IndexLabels[i]
+			rct.Leaves[i] = leaf
 		}
 	}
 	// If S2 does not contain an isolated point
 	if num.ArraySumBool(S2) > 1 {
 		// Recursively construct tree on S2
-		rcTree.MakeTree(X, S2, N, I, node, "r", depth)
+		rct.MakeTree(X, S2, N, I, node, "r", depth)
 	} else {
 		// Create a leaf node from isolated point
 		i := num.AsScalar(num.FlatNonZero(S2))
@@ -142,21 +127,21 @@ func (rcTree *RCTree) MakeTree(X [][]float64, S []bool, N []int, I []int, parent
 			// Add a key in the leaves map pointing to leaf for all duplicate indices
 			J := num.FlatNonZero(num.ArrayEqInt(I, i))
 			// Get index label
-			J = num.ArrayIndicesInt(rcTree.IndexLabels, J)
+			J = num.ArrayIndicesInt(rct.IndexLabels, J)
 			for _, j := range J {
-				rcTree.Leaves[j] = leaf
+				rct.Leaves[j] = leaf
 			}
 		} else {
-			i = rcTree.IndexLabels[i]
-			rcTree.Leaves[i] = leaf
+			i = rct.IndexLabels[i]
+			rct.Leaves[i] = leaf
 		}
 	}
 	depth--
 }
 
 // Cut creates a child node to the left or right of the parent
-func (rcTree *RCTree) Cut(X [][]float64, S []bool, parent *Node, side string) ([]bool, []bool, *Node) {
-	subset := num.ArrayBoolFloat64(X, S)
+func (rct *RCTree) Cut(X [][]float64, S []bool, parent *Node, side string) ([]bool, []bool, *Node) {
+	subset := num.ArrayBoolFloat(X, S)
 	// Find max and min over all d dimensions
 	xmax := num.MaxColValues(subset)
 	xmin := num.MinColValues(subset)
@@ -166,14 +151,12 @@ func (rcTree *RCTree) Cut(X [][]float64, S []bool, parent *Node, side string) ([
 	l = num.ArrayDivVal(l, num.ArraySumFloat(l))
 
 	// Determine dimension to cut
-	q := num.RndChoice(rcTree.Ndim, l)
+	q := num.RndChoice(rct.Ndim, l)
 	// Determine value for split
 	p := num.RndUniform(xmin[q], xmax[q])
 
-	bufferMain.Reset()
-	bufferMain.WriteString("\nCut Tree\n")
-	bufferMain.WriteString(fmt.Sprintf("l: %v\nq: %d  p: %f\n", l, q, p))
-	fmt.Fprintln(logMain, bufferMain.String())
+	rct.Log.Section("\nCut Tree\n")
+	rct.Log.Add(fmt.Sprintf("l: %v\nq: %d  p: %f\n", l, q, p))
 
 	// Determine subset of points to left
 	arrayLeq := num.ArrayLeq(num.GetColumn(X, q), p)
@@ -182,10 +165,8 @@ func (rcTree *RCTree) Cut(X [][]float64, S []bool, parent *Node, side string) ([
 	arrayNot := num.ArrayNot(S1)
 	S2 := num.ArrayAnd(arrayNot, S) // S2 is all the points in S not in S1
 
-	if num.ArrayCompare(S, S1) {
-		bufferMain.Reset()
-		bufferMain.WriteString("Warning: S equals S1\n")
-		fmt.Fprintln(logMain, bufferMain.String())
+	if num.ArrayCompareBool(S, S1) {
+		rct.Log.Add("Warning: S equals S1\n")
 	}
 
 	// Create new child node
@@ -199,29 +180,30 @@ func (rcTree *RCTree) Cut(X [][]float64, S []bool, parent *Node, side string) ([
 		case "r":
 			parent.Branch.r = child
 		case "root":
-			rcTree.Root = child
+			rct.Root = child
 		}
 	}
 
+	rct.Log.Write()
 	return S1, S2, child
 }
 
 // ForgetPoint deletes a leaf from the tree
-func (rcTree *RCTree) ForgetPoint(index int) *Node {
+func (rct *RCTree) ForgetPoint(index int) *Node {
 	// Get leaf from the leaves array
-	node := rcTree.Leaves[index]
+	node := rct.Leaves[index]
 	// If duplicate points exist
 	if node.n > 1 {
 		// Decrement the number of points in the leaf and for all branches above
-		rcTree.UpdateLeafCountUpwards(node, -1)
-		return RemoveIndex(rcTree.Leaves, index)
+		rct.UpdateLeafCountUpwards(node, -1)
+		return RemoveIndex(rct.Leaves, index)
 	}
 
 	// If node is the root
 	if node.isRoot() {
-		rcTree.Root = nil
-		rcTree.Ndim = 0
-		return RemoveIndex(rcTree.Leaves, index)
+		rct.Root = nil
+		rct.Ndim = 0
+		return RemoveIndex(rct.Leaves, index)
 	}
 
 	// Find parent
@@ -235,14 +217,14 @@ func (rcTree *RCTree) ForgetPoint(index int) *Node {
 	if parent.isRoot() {
 		// Set sibling as new root
 		sibling.u = nil
-		rcTree.Root = sibling
+		rct.Root = sibling
 		// Update depths
 		if sibling.isLeaf() {
 			sibling.Leaf.d = 0
 		} else {
-			rcTree.MapDepths(sibling, -1)
+			rct.MapDepths(sibling, -1)
 		}
-		return RemoveIndex(rcTree.Leaves, index)
+		return RemoveIndex(rct.Leaves, index)
 	}
 	// Find grandparent
 	grandparent := parent.u
@@ -256,17 +238,17 @@ func (rcTree *RCTree) ForgetPoint(index int) *Node {
 	}
 	// Update depths
 	parent = grandparent
-	rcTree.MapDepths(sibling, -1)
+	rct.MapDepths(sibling, -1)
 	// Update leaf counts under each branch
-	rcTree.UpdateLeafCountUpwards(parent, -1)
+	rct.UpdateLeafCountUpwards(parent, -1)
 	// Update bounding boxes
 	point := node.Leaf.x
-	rcTree.RelaxBboxUpwards(parent, point)
-	return RemoveIndex(rcTree.Leaves, index)
+	rct.RelaxBboxUpwards(parent, point)
+	return RemoveIndex(rct.Leaves, index)
 }
 
 // UpdateLeafCountUpwards updates the stored count of leaves beneath each branch (branch.n)
-func (rcTree *RCTree) UpdateLeafCountUpwards(node *Node, inc int) {
+func (rct *RCTree) UpdateLeafCountUpwards(node *Node, inc int) {
 	for node != nil {
 		node.n += inc
 		node = node.u
@@ -274,34 +256,34 @@ func (rcTree *RCTree) UpdateLeafCountUpwards(node *Node, inc int) {
 }
 
 // InsertPoint inserts a point into the tree, creating a new leaf
-func (rcTree *RCTree) InsertPoint(point []float64, index int, tolerance float64) (*Node, error) {
-	if rcTree.Root == nil {
+func (rct *RCTree) InsertPoint(point []float64, index int, tolerance float64) (*Node, error) {
+	if rct.Root == nil {
 		leafNode := NewLeaf(index, 0, nil, point, 1)
-		rcTree.Root = leafNode
-		rcTree.Ndim = len(point)
-		rcTree.Leaves[index] = leafNode
+		rct.Root = leafNode
+		rct.Ndim = len(point)
+		rct.Leaves[index] = leafNode
 		return leafNode, nil
 	}
 	// If leaves already exist in tree, check dimensions of point
-	if len(point) != rcTree.Ndim {
-		err := fmt.Errorf("Point dimension (%d) not equal to existing points in tree (%d)", len(point), rcTree.Ndim)
+	if len(point) != rct.Ndim {
+		err := fmt.Errorf("Point dimension (%d) not equal to existing points in tree (%d)", len(point), rct.Ndim)
 		return nil, err
 	}
 	// Check for existing index in leaves map
-	if _, exists := rcTree.Leaves[index]; exists {
+	if _, exists := rct.Leaves[index]; exists {
 		err := fmt.Errorf("Index %d already exists in leaves map", index)
 		return nil, err
 	}
 	// Check for duplicate points
-	duplicate := rcTree.FindDuplicate(point, tolerance)
+	duplicate := rct.FindDuplicate(point, tolerance)
 	if duplicate != nil {
-		rcTree.UpdateLeafCountUpwards(duplicate, 1)
-		rcTree.Leaves[index] = duplicate
+		rct.UpdateLeafCountUpwards(duplicate, 1)
+		rct.Leaves[index] = duplicate
 		return duplicate, nil
 	}
 	// Tree has points and point is not a duplicate, so continue
 	maxDepth := math.MinInt64
-	for _, node := range rcTree.Leaves {
+	for _, node := range rct.Leaves {
 		if node.Leaf.d > maxDepth {
 			maxDepth = node.Leaf.d
 		}
@@ -312,12 +294,12 @@ func (rcTree *RCTree) InsertPoint(point []float64, index int, tolerance float64)
 	var leafNode *Node
 	var side string
 
-	currentNode := rcTree.Root
+	currentNode := rct.Root
 	parent := currentNode.u
 
 	for range make([]int, maxDepth+1) {
 		bbox := currentNode.b
-		cutDimension, cut, _ := rcTree.InsertPointCut(point, bbox)
+		cutDimension, cut, _ := rct.InsertPointCut(point, bbox)
 		if cut <= bbox[0][cutDimension] {
 			leafNode = NewLeaf(index, depth, nil, point, 1)
 			branchNode = NewBranch(cutDimension, cut, leafNode, currentNode, nil, leafNode.n+currentNode.n, nil)
@@ -359,24 +341,24 @@ func (rcTree *RCTree) InsertPoint(point []float64, index int, tolerance float64)
 		}
 	} else {
 		// If a new root was created, assign the attribute
-		rcTree.Root = branchNode
+		rct.Root = branchNode
 	}
 	// Increment depths below branch
-	rcTree.MapDepths(branchNode, 1)
+	rct.MapDepths(branchNode, 1)
 	// Increment leaf count above branch
-	rcTree.UpdateLeafCountUpwards(parent, 1)
+	rct.UpdateLeafCountUpwards(parent, 1)
 	// Update bounding boxes
-	rcTree.TightenBboxUpwards(branchNode)
+	rct.TightenBboxUpwards(branchNode)
 	// Add leaf to leaves dict
-	rcTree.Leaves[index] = leafNode
+	rct.Leaves[index] = leafNode
 	// Return inserted leaf for convenience
 	return leafNode, nil
 }
 
 // Query searches for leaf nearest to point
-func (rcTree RCTree) Query(point []float64, node *Node) *Node {
+func (rct RCTree) Query(point []float64, node *Node) *Node {
 	if node == nil {
-		node = rcTree.Root
+		node = rct.Root
 	}
 	return queryPoint(point, node)
 }
@@ -393,14 +375,14 @@ func queryPoint(point []float64, node *Node) *Node {
 }
 
 // Disp computes displacement at leaf
-func (rcTree RCTree) Disp(param interface{}) (int, error) {
+func (rct RCTree) Disp(param interface{}) (int, error) {
 	leaf, ok := param.(*Node)
 	if !ok {
 		index, ok := param.(int)
 		if !ok {
 			return 0, fmt.Errorf("CoDisp parameter not recognised: %v", leaf)
 		}
-		leaf = rcTree.Leaves[index]
+		leaf = rct.Leaves[index]
 	}
 
 	// Handle case where leaf is root
@@ -420,14 +402,14 @@ func (rcTree RCTree) Disp(param interface{}) (int, error) {
 }
 
 // CoDisp computes collusive displacement (anomaly score) at leaf
-func (rcTree RCTree) CoDisp(param interface{}) (float64, error) {
+func (rct RCTree) CoDisp(param interface{}) (float64, error) {
 	leaf, ok := param.(*Node)
 	if !ok {
 		index, ok := param.(int)
 		if !ok {
 			return 0, fmt.Errorf("CoDisp parameter not recognised: %v", leaf)
 		}
-		leaf = rcTree.Leaves[index]
+		leaf = rct.Leaves[index]
 	}
 
 	// Handle case where leaf is root
@@ -458,14 +440,14 @@ func (rcTree RCTree) CoDisp(param interface{}) (float64, error) {
 }
 
 // GetBbox computes the bounding box of all points underneath a given branch
-func (rcTree *RCTree) GetBbox(branch *Node) [][]float64 {
+func (rct *RCTree) GetBbox(branch *Node) [][]float64 {
 	if branch == nil {
-		branch = rcTree.Root
+		branch = rct.Root
 	}
 
-	mins := num.Full(rcTree.Ndim, math.Inf(1))
-	maxes := num.Full(rcTree.Ndim, math.Inf(-1))
-	rcTree.MapBboxes(branch, mins, maxes)
+	mins := num.Full(rct.Ndim, math.Inf(1))
+	maxes := num.Full(rct.Ndim, math.Inf(-1))
+	rct.MapBboxes(branch, mins, maxes)
 	bbox := num.ArrayVStack(mins, maxes)
 
 	return bbox
@@ -473,8 +455,8 @@ func (rcTree *RCTree) GetBbox(branch *Node) [][]float64 {
 
 // FindDuplicate returns the leaf containing the duplicate of an existing point in the tree
 // Returns nil if no duplicate found
-func (rcTree *RCTree) FindDuplicate(point []float64, tolerance float64) *Node {
-	nearest := rcTree.Query(point, nil)
+func (rct *RCTree) FindDuplicate(point []float64, tolerance float64) *Node {
+	nearest := rct.Query(point, nil)
 	if tolerance == 0 {
 		if num.ArrayCompareFloat(nearest.Leaf.x, point) {
 			return nearest
@@ -520,13 +502,13 @@ func lrBranchBbox(branchNode *Node) [][]float64 {
 }
 
 // GetBboxTopDown recursively computes bboxes of all branches from root to leaves
-func (rcTree *RCTree) GetBboxTopDown(node *Node) {
+func (rct *RCTree) GetBboxTopDown(node *Node) {
 	if node.isBranch() {
 		if node.Branch.l != nil {
-			rcTree.GetBboxTopDown(node.Branch.l)
+			rct.GetBboxTopDown(node.Branch.l)
 		}
 		if node.Branch.r != nil {
-			rcTree.GetBboxTopDown(node.Branch.r)
+			rct.GetBboxTopDown(node.Branch.r)
 		}
 		bbox := lrBranchBbox(node)
 		node.b = bbox
@@ -534,33 +516,33 @@ func (rcTree *RCTree) GetBboxTopDown(node *Node) {
 }
 
 // CountAllTopDown recursively computes the number of leaves below each branch from root to leaves
-func (rcTree *RCTree) CountAllTopDown(node *Node) {
+func (rct *RCTree) CountAllTopDown(node *Node) {
 	if node.isBranch() {
 		if node.Branch.l != nil {
-			rcTree.CountAllTopDown(node.Branch.l)
+			rct.CountAllTopDown(node.Branch.l)
 		}
 		if node.Branch.r != nil {
-			rcTree.CountAllTopDown(node.Branch.r)
+			rct.CountAllTopDown(node.Branch.r)
 		}
 		node.n = node.Branch.l.n + node.Branch.r.n
 	}
 }
 
 // CountLeaves counts the total leaves underneath a single node
-func (rcTree *RCTree) CountLeaves(branch *Node) int {
+func (rct *RCTree) CountLeaves(branch *Node) int {
 	var numLeaves int
 
-	rcTree.MapLeaves(branch, &numLeaves)
+	rct.MapLeaves(branch, &numLeaves)
 	return numLeaves
 }
 
 // SearchForLeaf -
-func (rcTree *RCTree) SearchForLeaf() {
+func (rct *RCTree) SearchForLeaf() {
 
 }
 
 // TightenBboxUpwards expands bbox of all nodes above new point if point is outside the existing bbox
-func (rcTree *RCTree) TightenBboxUpwards(node *Node) {
+func (rct *RCTree) TightenBboxUpwards(node *Node) {
 	bbox := lrBranchBbox(node)
 	node.b = bbox
 	node = node.u
@@ -587,11 +569,11 @@ func (rcTree *RCTree) TightenBboxUpwards(node *Node) {
 
 // RelaxBboxUpwards contracts bbox of all nodes above a deleted point
 // if the deleted point defined the boundary of the bbox
-func (rcTree *RCTree) RelaxBboxUpwards(node *Node, point []float64) {
+func (rct *RCTree) RelaxBboxUpwards(node *Node, point []float64) {
 	for node != nil {
 		bbox := lrBranchBbox(node)
 		lastIndex := len(node.b) - 1
-		if !(num.AnyEq(node.b[0][:], point) || num.AnyEqFloat(node.b[lastIndex][:], point)) {
+		if !(num.AnyEqFloat(node.b[0][:], point) || num.AnyEqFloat(node.b[lastIndex][:], point)) {
 			break
 		}
 		num.ArrayCopy(node.b[0][:], bbox[0][:])
@@ -603,7 +585,7 @@ func (rcTree *RCTree) RelaxBboxUpwards(node *Node, point []float64) {
 }
 
 // InsertPointCut generates the cut dimension and cut value based on InsertPoint()
-func (rcTree *RCTree) InsertPointCut(point []float64, bbox [][]float64) (int, float64, error) {
+func (rct *RCTree) InsertPointCut(point []float64, bbox [][]float64) (int, float64, error) {
 	// Generate the bounding box
 	bboxHat := num.ArrayEmpty(len(bbox), len(bbox[0]))
 	// Update the bounding box based on the internal point

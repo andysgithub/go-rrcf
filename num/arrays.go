@@ -118,9 +118,9 @@ func ArrayEqFloat(array []float64, value float64) []bool {
 	return isEqual
 }
 
-// ArrayCompare compares two boolean arrays
+// ArrayCompareBool compares two boolean arrays
 // Returns true if all array elements are equal
-func ArrayCompare(array1 []bool, array2 []bool) bool {
+func ArrayCompareBool(array1 []bool, array2 []bool) bool {
 	for i := range array1 {
 		if array1[i] != array2[i] {
 			return false
@@ -213,7 +213,6 @@ func ArrayCopy(array1 []float64, array2 []float64) {
 	for i, element := range array2 {
 		array1[i] = element
 	}
-	//return array1
 }
 
 // ArrayCopyWhenTrue copies array2 elements into array1 where the bools array element is true
@@ -235,8 +234,8 @@ func ArrayIndicesInt(array []int, indices []int) []int {
 	return returnSlice
 }
 
-// ArrayBoolFloat64 returns a slice containing array rows where the corresponding bool is true
-func ArrayBoolFloat64(array [][]float64, indices []bool) [][]float64 {
+// ArrayBoolFloat returns a slice containing array rows where the corresponding bool is true
+func ArrayBoolFloat(array [][]float64, indices []bool) [][]float64 {
 	var returnSlice [][]float64
 
 	for index, isTrue := range indices {
@@ -376,8 +375,8 @@ func Array2DMulVal(array [][]float64, value float64) [][]float64 {
 	return result
 }
 
-// ArrayIntMulVal returns the elements of a integer list multiplied by the specified float value
-func ArrayIntMulVal(array []int, value float64) []float64 {
+// ArrayMulValInt returns the elements of a integer list multiplied by the specified float value
+func ArrayMulValInt(array []int, value float64) []float64 {
 	var returnSlice []float64
 
 	for _, element := range array {
@@ -386,8 +385,8 @@ func ArrayIntMulVal(array []int, value float64) []float64 {
 	return returnSlice
 }
 
-// Array2DAddVal returns the sum of two 2D arrays
-func Array2DAddVal(array1 [][]float64, array2 [][]float64) [][]float64 {
+// Array2DAdd returns the sum of two 2D arrays
+func Array2DAdd(array1 [][]float64, array2 [][]float64) [][]float64 {
 	rows := len(array1)
 	cols := len(array1[0])
 

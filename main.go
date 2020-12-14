@@ -11,10 +11,10 @@ import (
 )
 
 func main() {
-	plotPoints := StreamingTrial()
-	utils.WriteFile(plotPoints, "results/streaming/plot_points.csv")
+	// plotPoints := StreamingTrial()
+	// utils.WriteFile(plotPoints, "results/streaming/plot_points.csv")
 
-	plotPoints = BatchTrial()
+	plotPoints := BatchTrial()
 	utils.WriteFile(plotPoints, "results/batch/plot_points.csv")
 }
 
@@ -28,7 +28,7 @@ func StreamingTrial() [][]float64 {
 	T := 2.0 * math.Pi / 100
 	t := num.Arange(n)
 
-	diff := num.ArraySubVal(num.ArrayIntMulVal(t, T), float64(phi)*T)
+	diff := num.ArraySubVal(num.ArrayMulValInt(t, T), float64(phi)*T)
 	mul := num.ArrayMulVal(num.ArraySin(diff), float64(A))
 	sin := num.ArrayAddVal(mul, float64(center))
 
@@ -70,7 +70,7 @@ func StreamingTrial() [][]float64 {
 			forest[i].InsertPoint(point, index, 0)
 			// Compute codisp on the new point
 			newCodisp, _ := forest[i].CoDisp(index)
-			// And take the average over all trees
+			// Take the average over all trees
 			if _, ok := avgCodisp[index]; !ok {
 				avgCodisp[index] = 0
 			}
@@ -104,7 +104,7 @@ func BatchTrial() [][]float64 {
 	randArray := num.Randn2(len(X), len(X[0]))
 	mulArray := num.Array2DMulVal(randArray, 0.01)
 
-	X = num.Array2DAddVal(X, mulArray)
+	X = num.Array2DAdd(X, mulArray)
 
 	// Construct a random forest
 
@@ -122,10 +122,9 @@ func BatchTrial() [][]float64 {
 		cols := sampleSizeRange[1]
 		ixs := num.RndArray(n, rows, cols)
 		for _, ix := range ixs[0 : rows-1] {
-			tree := rrcf.NewRCTree(nil, nil, 0, 0)
 			// Produce a new array as sampled rows from X
 			sampledX := num.ArraySample(X, ix)
-			tree.Init(sampledX, ix, 9, 0)
+			tree := rrcf.NewRCTree(sampledX, ix, 9, 0)
 			forest = append(forest, tree)
 		}
 	}
@@ -139,12 +138,9 @@ func BatchTrial() [][]float64 {
 	// Compute average CoDisp
 	index := make([]float64, n)
 	for _, tree := range forest {
-		codisp := make(map[int]float64)
 		for key, node := range tree.Leaves {
-			codisp[key], _ = tree.CoDisp(node)
-		}
-		for key, value := range codisp {
-			avgCodisp[key] += value
+			codisp, _ := tree.CoDisp(node)
+			avgCodisp[key] += codisp
 			index[key]++
 		}
 	}

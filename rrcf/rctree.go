@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/andysgithub/go-rrcf/logging"
@@ -47,12 +48,12 @@ func (rct *RCTree) Init(X [][]float64, indexLabels []int, precision int, randomS
 	switch randomState.(type) {
 	case int:
 		// Random number generation with provided seed
-		// rand.Seed((int64)(randomState.(int)))
-		rct.rnd.Seed((int64)(randomState.(int)))
+		rand.Seed((int64)(randomState.(int)))
+		// rct.rnd.Seed((int64)(randomState.(int)))
 	default:
 		// Random number generation with random seed
-		// rand.Seed(time.Now().UTC().UnixNano())
-		rct.rnd.Seed(time.Now().UTC().UnixNano())
+		rand.Seed(time.Now().UTC().UnixNano())
+		// rct.rnd.Seed(time.Now().UTC().UnixNano())
 	}
 
 	if X != nil {

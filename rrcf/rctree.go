@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
 	"time"
 
 	"github.com/andysgithub/go-rrcf/logging"
 	"github.com/andysgithub/go-rrcf/num"
+	"github.com/andysgithub/go-rrcf/random"
 )
 
 // RCTree - Robust Random Cut Forest
@@ -19,15 +19,23 @@ type RCTree struct {
 	IndexLabels []int         // Index labels
 	Parent      *Node         // Parent of the current node
 	Log         *logging.Logger
+	rnd         random.Random
 }
 
 // NewRCTree returns a new random cut forest
-func NewRCTree(X [][]float64, indexLabels []int, precision int, randomState interface{}) RCTree {
-	rand.Seed(time.Now().UTC().UnixNano())
+func NewRCTree(X [][]float64, indexLabels []int, precision int, randomState interface{}, id int) RCTree {
+	rnd := random.NewRandom()
+
+	log := logging.NewLogger("logs/rctree-all.log")
+	if id == 0 {
+		log = logging.NewLogger(fmt.Sprintf("logs/rctree-%d.log", id))
+	}
+
 	rct := RCTree{
 		make(map[int]*Node),
 		nil, 0, nil, nil,
-		logging.NewLogger("logs/rctree.log"),
+		log,
+		rnd,
 	}
 
 	rct.Init(X, indexLabels, precision, randomState)
@@ -39,7 +47,12 @@ func (rct *RCTree) Init(X [][]float64, indexLabels []int, precision int, randomS
 	switch randomState.(type) {
 	case int:
 		// Random number generation with provided seed
-		rand.Seed((int64)(randomState.(int)))
+		// rand.Seed((int64)(randomState.(int)))
+		rct.rnd.Seed((int64)(randomState.(int)))
+	default:
+		// Random number generation with random seed
+		// rand.Seed(time.Now().UTC().UnixNano())
+		rct.rnd.Seed(time.Now().UTC().UnixNano())
 	}
 
 	if X != nil {
@@ -152,8 +165,10 @@ func (rct *RCTree) Cut(X [][]float64, S []bool, parent *Node, side string) ([]bo
 
 	// Determine dimension to cut
 	q := num.RndChoice(rct.Ndim, l)
+	// q := rct.rnd.RndChoice(rct.Ndim, l)
 	// Determine value for split
 	p := num.RndUniform(xmin[q], xmax[q])
+	// p := rct.rnd.RndUniform(xmin[q], xmax[q])
 
 	rct.Log.Section("\nCut Tree\n")
 	rct.Log.Add(fmt.Sprintf("l: %v\nq: %d  p: %f\n", l, q, p))
@@ -300,13 +315,14 @@ func (rct *RCTree) InsertPoint(point []float64, index int, tolerance float64) (*
 	for range make([]int, maxDepth+1) {
 		bbox := currentNode.b
 		cutDimension, cut, _ := rct.InsertPointCut(point, bbox)
+
 		if cut <= bbox[0][cutDimension] {
 			leafNode = NewLeaf(index, depth, nil, point, 1)
 			branchNode = NewBranch(cutDimension, cut, leafNode, currentNode, nil, leafNode.n+currentNode.n, nil)
 			break
 		} else if cut >= bbox[len(bbox)-1][cutDimension] {
 			leafNode = NewLeaf(index, depth, nil, point, 1)
-			branchNode = NewBranch(cutDimension, cut, leafNode, currentNode, nil, leafNode.n+currentNode.n, nil)
+			branchNode = NewBranch(cutDimension, cut, currentNode, leafNode, nil, leafNode.n+currentNode.n, nil)
 			break
 		} else {
 			depth++
@@ -598,6 +614,7 @@ func (rct *RCTree) InsertPointCut(point []float64, bbox [][]float64) (int, float
 	bSpan := num.ArraySub(bboxHat[lastBboxHat][:], bboxHat[0][:])
 	bRange := num.ArraySumFloat(bSpan)
 	r := num.RndUniform(0, bRange)
+	// r := rct.rnd.RndUniform(0, bRange)
 	spanSum := num.ArrayCumSum(bSpan)
 	cutDimension := math.MaxInt64
 	for j := range make([]int, len(spanSum)) {

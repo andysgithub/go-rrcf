@@ -2,20 +2,20 @@ package main
 
 import (
 	"math"
-	"math/rand"
 	"sort"
 
 	"github.com/andysgithub/go-rrcf/num"
+	"github.com/andysgithub/go-rrcf/random"
 	"github.com/andysgithub/go-rrcf/rrcf"
 	"github.com/andysgithub/go-rrcf/utils"
 )
 
 func main() {
-	// plotPoints := StreamingTrial()
-	// utils.WriteFile(plotPoints, "results/streaming/plot_points.csv")
+	plotPoints := StreamingTrial()
+	utils.WriteArray(plotPoints, "results/streaming/plot_points.csv")
 
-	plotPoints := BatchTrial()
-	utils.WriteFile(plotPoints, "results/batch/plot_points.csv")
+	// plotPoints = BatchTrial()
+	// utils.WriteArray(plotPoints, "results/batch/plot_points.csv")
 }
 
 // StreamingTrial shows how the algorithm can be used to detect anomalies in streaming time series data
@@ -43,10 +43,12 @@ func StreamingTrial() [][]float64 {
 
 	// Create a forest of empty trees
 	var forest []rrcf.RCTree
-	for range make([]int, numTrees) {
-		tree := rrcf.NewRCTree(nil, nil, 9, 0)
+	for i := range make([]int, numTrees) {
+		tree := rrcf.NewRCTree(nil, nil, 9, nil, i)
 		forest = append(forest, tree)
 	}
+
+	// rrcf.SaveForest(forest, "data/forest/stream.json")
 
 	// Insert streaming points into tree and compute anomaly score
 	// Use the "shingle" generator to create a rolling window
@@ -78,6 +80,12 @@ func StreamingTrial() [][]float64 {
 		}
 	}
 
+	// Close logs
+	for _, tree := range forest {
+		tree.Log.Write()
+		tree.Log.Close()
+	}
+
 	// Compile points for plotting
 	plotPoints := num.ArrayEmpty(totalPoints, 2)
 
@@ -91,8 +99,10 @@ func StreamingTrial() [][]float64 {
 
 // BatchTrial shows how the algorithm can be used to detect outliers in a batch setting
 func BatchTrial() [][]float64 {
+	rnd := random.NewRandom()
+
 	// Set sample parameters
-	rand.Seed((int64)(0))
+	rnd.Seed(int64(0))
 	n := 2010
 	d := 3
 
@@ -101,10 +111,12 @@ func BatchTrial() [][]float64 {
 	num.ArrayFillColumn(X, 0, 0, 999, 5.)
 	num.ArrayFillColumn(X, 0, 1000, 1999, -5.)
 
-	randArray := num.Randn2(len(X), len(X[0]))
+	randArray := num.Randl2(len(X), len(X[0]))
+	//randArray := rnd.Randn2(len(X), len(X[0]))
 	mulArray := num.Array2DMulVal(randArray, 0.01)
-
 	X = num.Array2DAdd(X, mulArray)
+
+	utils.WriteArray(X, "data/batch.csv")
 
 	// Construct a random forest
 
@@ -121,13 +133,16 @@ func BatchTrial() [][]float64 {
 		rows := sampleSizeRange[0]
 		cols := sampleSizeRange[1]
 		ixs := num.RndArray(n, rows, cols)
+		//ixs := rnd.RndArray(n, rows, cols)
 		for _, ix := range ixs[0 : rows-1] {
 			// Produce a new array as sampled rows from X
 			sampledX := num.ArraySample(X, ix)
-			tree := rrcf.NewRCTree(sampledX, ix, 9, 0)
+			tree := rrcf.NewRCTree(sampledX, ix, 9, nil, i)
 			forest = append(forest, tree)
 		}
 	}
+
+	// rrcf.SaveForest(forest, "data/forest/batch.json")
 
 	// Create a map to store anomaly score of each point
 	avgCodisp := make(map[int]float64)
@@ -138,8 +153,15 @@ func BatchTrial() [][]float64 {
 	// Compute average CoDisp
 	index := make([]float64, n)
 	for _, tree := range forest {
-		for key, node := range tree.Leaves {
-			codisp, _ := tree.CoDisp(node)
+
+		keys := []int{}
+		for k := range tree.Leaves {
+			keys = append(keys, k)
+		}
+		sort.Ints(keys)
+
+		for _, key := range keys {
+			codisp, _ := tree.CoDisp(key)
 			avgCodisp[key] += codisp
 			index[key]++
 		}

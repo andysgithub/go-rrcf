@@ -26,6 +26,11 @@ func NewLogger(fileName string) *Logger {
 	return &logger
 }
 
+// Clear -
+func (log *Logger) Clear() {
+	log.bufferMain.Reset()
+}
+
 // Section -
 func (log *Logger) Section(text string) {
 	log.bufferMain.Reset()

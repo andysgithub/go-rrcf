@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-// WriteFile2D saves a 2D array of floats to a csv file
-func WriteFile(data [][]float64, fileName string) {
+// WriteArray saves a 2D array of floats to a csv file
+func WriteArray(data [][]float64, fileName string) {
 	csvFile, _ := os.Create(fileName)
 	csvwriter := csv.NewWriter(csvFile)
 

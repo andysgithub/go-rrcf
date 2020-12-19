@@ -27,6 +27,19 @@ func Randn2(rows, cols int) [][]float64 {
 	return newArray
 }
 
+// Randl2 generates a 2D array of linearly distributed random floats
+func Randl2(rows, cols int) [][]float64 {
+	newArray := make([][]float64, rows)
+
+	for i := 0; i < rows; i++ {
+		newArray[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			newArray[i][j] = rand.Float64()
+		}
+	}
+	return newArray
+}
+
 // RndChoice generates a random integer from the given range according to a probability density function
 func RndChoice(rangeVal int, pdf []float64) int {
 
@@ -52,6 +65,8 @@ func RndChoice(rangeVal int, pdf []float64) int {
 // RndArray generates a 2D array of random integers from a collection in a given range without replacement
 func RndArray(rangeVal int, rows int, cols int) [][]int {
 	s := Arange(rangeVal)
+
+	// rand.Seed(0)
 
 	rndArray := make([][]int, rows)
 	for i := 0; i < rows; i++ {

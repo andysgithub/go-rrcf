@@ -1,6 +1,6 @@
 package rrcf
 
-import "github.com/andysgithub/go-rrcf/num"
+import "github.com/andysgithub/go-rrcf/array"
 
 // Node of RCTree consisting of a leaf or branch and containing at most one parent
 type Node struct {
@@ -59,7 +59,7 @@ func NewLeaf(i int, d int, u *Node, x []float64, n int) *Node {
 	node := Node{
 		&Leaf{i, d, x},
 		nil,
-		num.ArrayReshapeRow(x),
+		array.ReshapeRow(x),
 		u,
 		n,
 	}

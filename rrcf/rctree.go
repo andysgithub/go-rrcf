@@ -4,74 +4,60 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
 	"time"
 
-	"github.com/andysgithub/go-rrcf/logging"
-	"github.com/andysgithub/go-rrcf/num"
+	"github.com/andysgithub/go-rrcf/array"
 	"github.com/andysgithub/go-rrcf/random"
 )
 
 // RCTree - Robust Random Cut Forest
 type RCTree struct {
-	Leaves      map[int]*Node // Map containing pointers to all leaves in tree
-	Root        *Node         // Pointer to root of tree
-	Ndim        int           // Dimension of points in the tree
-	IndexLabels []int         // Index labels
-	Parent      *Node         // Parent of the current node
-	Log         *logging.Logger
-	rnd         random.Random
+	Leaves      map[int]*Node       // Map containing pointers to all leaves in tree
+	Root        *Node               // Pointer to root of tree
+	Ndim        int                 // Dimension of points in the tree
+	IndexLabels []int               // Index labels
+	Parent      *Node               // Parent of the current node
+	Rng         *random.RandomState // RandomState instance for random operations
 }
 
 // NewRCTree returns a new random cut forest
-func NewRCTree(X [][]float64, indexLabels []int, precision int, randomState interface{}, id int) RCTree {
-	rnd := random.NewRandom()
-
-	log := logging.NewLogger("logs/rctree-all.log")
-	if id == 0 {
-		log = logging.NewLogger(fmt.Sprintf("logs/rctree-%d.log", id))
-	}
-
+func NewRCTree(X [][]float64, indexLabels []int, precision int, randomState interface{}) RCTree {
 	rct := RCTree{
 		make(map[int]*Node),
-		nil, 0, nil, nil,
-		log,
-		rnd,
+		nil, 0, nil, nil, nil,
 	}
 
-	rct.Init(X, indexLabels, precision, randomState)
+	switch randomState.(type) {
+	case int:
+		// Random number generation with provided seed
+		rct.Rng = random.NewRandomState(randomState.(int64))
+	case *random.RandomState:
+		// The existing RandomState instance
+		rct.Rng = randomState.(*random.RandomState)
+	default:
+		// Random number generation with random seed
+		rct.Rng = random.NewRandomState(time.Now().UTC().UnixNano())
+	}
+
+	rct.Init(X, indexLabels, precision)
 	return rct
 }
 
 // Init - Initialises the random cut forest
-func (rct *RCTree) Init(X [][]float64, indexLabels []int, precision int, randomState interface{}) {
-	switch randomState.(type) {
-	case int:
-		// Random number generation with provided seed
-		rand.Seed((int64)(randomState.(int)))
-		// rct.rnd.Seed((int64)(randomState.(int)))
-	default:
-		// Random number generation with random seed
-		rand.Seed(time.Now().UTC().UnixNano())
-		// rct.rnd.Seed(time.Now().UTC().UnixNano())
-	}
-
+func (rct *RCTree) Init(X [][]float64, indexLabels []int, precision int) {
 	if X != nil {
 		// Round data to avoid sorting errors
-		X = num.Around(X, precision)
+		X = array.Around(X, precision)
 		if indexLabels == nil {
-			indexLabels = num.Arange(len(X))
+			indexLabels = array.Arange(len(X))
 		}
 		rct.IndexLabels = indexLabels
 
 		// Remove duplicated rows
-		X, I, N := num.Unique(X)
+		X, I, N := array.Unique(X)
 
 		dataRows := len(X)
 		dataCols := len(X[0])
-
-		rct.Log.Section("\n-------- Tree Build Start --------\n")
-		rct.Log.AddLast(fmt.Sprintf("Rows: %d  Cols: %d\n", dataRows, dataCols))
 
 		// Store dimension of dataset
 		rct.Ndim = dataCols
@@ -80,7 +66,7 @@ func (rct *RCTree) Init(X [][]float64, indexLabels []int, precision int, randomS
 		rct.Parent = nil
 
 		// Create RRC Tree
-		S := num.OnesBool(dataRows)
+		S := array.OnesBool(dataRows)
 		rct.MakeTree(X, S, N, I, rct.Root, "root", 0)
 
 		// Remove parent of root
@@ -94,30 +80,26 @@ func (rct *RCTree) Init(X [][]float64, indexLabels []int, precision int, randomS
 
 // MakeTree generates a random cut tree
 func (rct *RCTree) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *Node, side string, depth int) {
-
-	rct.Log.Section("\nCreate Branch\n")
-	rct.Log.AddLast(fmt.Sprintf("Side: %s  Depth: %d\n", side, depth))
-
 	// Increment depth as we traverse down
 	depth++
 	// Create a cut according to definition 1
 	S1, S2, node := rct.Cut(X, S, parent, side)
 	// If S1 does not contain an isolated point
-	if num.ArraySumBool(S1) > 1 {
+	if array.SumTrue(S1) > 1 {
 		// Recursively construct tree on S1
 		rct.MakeTree(X, S1, N, I, node, "l", depth)
 	} else {
 		// Create a leaf node from the isolated point
-		i := int(num.AsScalar(num.FlatNonZero(S1)))
+		i := int(array.AsScalar(array.FlatNonZero(S1)))
 		leaf := NewLeaf(i, depth, node, X[i][:], N[i])
 		// Link leaf node to parent
 		node.Branch.l = leaf
 		// If duplicates exist
 		if I != nil {
 			// Add a key in the leaves map pointing to leaf for all duplicate indices
-			J := num.FlatNonZero(num.ArrayEqInt(I, i))
+			J := array.FlatNonZero(array.EqualInt(I, i))
 			// Get index label
-			J = num.ArrayIndicesInt(rct.IndexLabels, J)
+			J = array.IndicesInt(rct.IndexLabels, J)
 			for _, j := range J {
 				rct.Leaves[j] = leaf
 			}
@@ -127,21 +109,21 @@ func (rct *RCTree) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *N
 		}
 	}
 	// If S2 does not contain an isolated point
-	if num.ArraySumBool(S2) > 1 {
+	if array.SumTrue(S2) > 1 {
 		// Recursively construct tree on S2
 		rct.MakeTree(X, S2, N, I, node, "r", depth)
 	} else {
 		// Create a leaf node from isolated point
-		i := num.AsScalar(num.FlatNonZero(S2))
+		i := array.AsScalar(array.FlatNonZero(S2))
 		leaf := NewLeaf(i, depth, node, X[i][:], N[i])
 		// Link leaf node to parent
 		node.Branch.r = leaf
 		// If duplicates exist
 		if I != nil {
 			// Add a key in the leaves map pointing to leaf for all duplicate indices
-			J := num.FlatNonZero(num.ArrayEqInt(I, i))
+			J := array.FlatNonZero(array.EqualInt(I, i))
 			// Get index label
-			J = num.ArrayIndicesInt(rct.IndexLabels, J)
+			J = array.IndicesInt(rct.IndexLabels, J)
 			for _, j := range J {
 				rct.Leaves[j] = leaf
 			}
@@ -155,35 +137,26 @@ func (rct *RCTree) MakeTree(X [][]float64, S []bool, N []int, I []int, parent *N
 
 // Cut creates a child node to the left or right of the parent
 func (rct *RCTree) Cut(X [][]float64, S []bool, parent *Node, side string) ([]bool, []bool, *Node) {
-	subset := num.ArrayBoolFloat(X, S)
+	subset := array.WhereTrueFloat(X, S)
 	// Find max and min over all d dimensions
-	xmax := num.MaxColValues(subset)
-	xmin := num.MinColValues(subset)
+	xmax := array.MaxColValues(subset)
+	xmin := array.MinColValues(subset)
 
 	// Compute l
-	l := num.ArraySub(xmax, xmin)
-	l = num.ArrayDivVal(l, num.ArraySumFloat(l))
+	l := array.Subtract1D(xmax, xmin)
+	l = array.DivVal1D(l, array.SumFloat(l))
 
 	// Determine dimension to cut
-	q := num.RndChoice(rct.Ndim, l)
-	// q := rct.rnd.RndChoice(rct.Ndim, l)
+	q := rct.Rng.Choice(rct.Ndim, l)
 	// Determine value for split
-	p := num.RndUniform(xmin[q], xmax[q])
-	// p := rct.rnd.RndUniform(xmin[q], xmax[q])
-
-	rct.Log.Section("\nCut Tree\n")
-	rct.Log.Add(fmt.Sprintf("l: %v\nq: %d  p: %f\n", l, q, p))
+	p := rct.Rng.Uniform(xmin[q], xmax[q])
 
 	// Determine subset of points to left
-	arrayLeq := num.ArrayLeq(num.GetColumn(X, q), p)
-	S1 := num.ArrayAnd(arrayLeq, S) // S1 is all points in S with random dimension < split value
+	arrayLeq := array.LeqFloat(array.GetColumn(X, q), p)
+	S1 := array.AndBool(arrayLeq, S) // S1 is all points in S with random dimension < split value
 	// Determine subset of points to right
-	arrayNot := num.ArrayNot(S1)
-	S2 := num.ArrayAnd(arrayNot, S) // S2 is all the points in S not in S1
-
-	if num.ArrayCompareBool(S, S1) {
-		rct.Log.Add("Warning: S equals S1\n")
-	}
+	arrayNot := array.NotBool(S1)
+	S2 := array.AndBool(arrayNot, S) // S2 is all the points in S not in S1
 
 	// Create new child node
 	child := NewBranch(q, p, nil, nil, parent, 0, nil)
@@ -200,7 +173,6 @@ func (rct *RCTree) Cut(X [][]float64, S []bool, parent *Node, side string) ([]bo
 		}
 	}
 
-	rct.Log.Write()
 	return S1, S2, child
 }
 
@@ -452,7 +424,7 @@ func (rct RCTree) CoDisp(param interface{}) (float64, error) {
 		results = append(results, result)
 		node = parent
 	}
-	coDisplacement := num.ArrayMaxValue(results)
+	coDisplacement := array.MaxValue(results)
 	return coDisplacement, nil
 }
 
@@ -462,10 +434,10 @@ func (rct *RCTree) GetBbox(branch *Node) [][]float64 {
 		branch = rct.Root
 	}
 
-	mins := num.Full(rct.Ndim, math.Inf(1))
-	maxes := num.Full(rct.Ndim, math.Inf(-1))
+	mins := array.Full(rct.Ndim, math.Inf(1))
+	maxes := array.Full(rct.Ndim, math.Inf(-1))
 	rct.MapBboxes(branch, mins, maxes)
-	bbox := num.ArrayVStack(mins, maxes)
+	bbox := array.VStack(mins, maxes)
 
 	return bbox
 }
@@ -475,12 +447,12 @@ func (rct *RCTree) GetBbox(branch *Node) [][]float64 {
 func (rct *RCTree) FindDuplicate(point []float64, tolerance float64) *Node {
 	nearest := rct.Query(point, nil)
 	if tolerance == 0 {
-		if num.ArrayCompareFloat(nearest.Leaf.x, point) {
+		if array.CompareFloat(nearest.Leaf.x, point) {
 			return nearest
 		}
 	} else {
-		result := num.IsClose(nearest.Leaf.x, point, tolerance)
-		if num.AllTrueBool(result) {
+		result := array.IsClose(nearest.Leaf.x, point, tolerance)
+		if array.AllTrueBool(result) {
 			return nearest
 		}
 	}
@@ -511,9 +483,9 @@ func lrBranchBbox(branchNode *Node) [][]float64 {
 		bbLastRight = bbRight
 	}
 
-	bbox := num.ArrayVStack(
-		num.ArrayMinimum(bbLeft, bbRight),
-		num.ArrayMaximum(bbLastLeft, bbLastRight))
+	bbox := array.VStack(
+		array.Minimum(bbLeft, bbRight),
+		array.Maximum(bbLastLeft, bbLastRight))
 
 	return bbox
 }
@@ -566,16 +538,16 @@ func (rct *RCTree) TightenBboxUpwards(node *Node) {
 	for node != nil {
 		lastNode := len(node.b) - 1
 		lastBbox := len(bbox) - 1
-		lt := num.ArrayLt(bbox[0][:], node.b[0][:])
-		gt := num.ArrayGt(bbox[lastBbox][:], node.b[lastNode][:])
-		ltAny := num.AnyTrueBool(lt)
-		gtAny := num.AnyTrueBool(gt)
+		lt := array.LtFloat(bbox[0][:], node.b[0][:])
+		gt := array.GtFloat(bbox[lastBbox][:], node.b[lastNode][:])
+		ltAny := array.AnyTrueBool(lt)
+		gtAny := array.AnyTrueBool(gt)
 		if ltAny || gtAny {
 			if ltAny {
-				num.ArrayCopyWhenTrue(node.b[0][:], bbox[0][:], lt)
+				array.CopyFloatWhenTrue(node.b[0][:], bbox[0][:], lt)
 			}
 			if gtAny {
-				num.ArrayCopyWhenTrue(node.b[lastNode][:], bbox[lastBbox][:], gt)
+				array.CopyFloatWhenTrue(node.b[lastNode][:], bbox[lastBbox][:], gt)
 			}
 		} else {
 			break
@@ -590,13 +562,13 @@ func (rct *RCTree) RelaxBboxUpwards(node *Node, point []float64) {
 	for node != nil {
 		bbox := lrBranchBbox(node)
 		lastIndex := len(node.b) - 1
-		if !(num.AnyEqFloat(node.b[0][:], point) || num.AnyEqFloat(node.b[lastIndex][:], point)) {
+		if !(array.AnyEqFloat(node.b[0][:], point) || array.AnyEqFloat(node.b[lastIndex][:], point)) {
 			break
 		}
-		num.ArrayCopy(node.b[0][:], bbox[0][:])
+		array.CopyFloat(node.b[0][:], bbox[0][:])
 		lastIndex = len(node.b) - 1
 		lastBbox := len(bbox) - 1
-		num.ArrayCopy(node.b[lastIndex][:], bbox[lastBbox][:])
+		array.CopyFloat(node.b[lastIndex][:], bbox[lastBbox][:])
 		node = node.u
 	}
 }
@@ -604,19 +576,18 @@ func (rct *RCTree) RelaxBboxUpwards(node *Node, point []float64) {
 // InsertPointCut generates the cut dimension and cut value based on InsertPoint()
 func (rct *RCTree) InsertPointCut(point []float64, bbox [][]float64) (int, float64, error) {
 	// Generate the bounding box
-	bboxHat := num.ArrayEmpty(len(bbox), len(bbox[0]))
+	bboxHat := array.Zero2D(len(bbox), len(bbox[0]))
 	// Update the bounding box based on the internal point
 	lastBbox := len(bbox) - 1
 	lastBboxHat := len(bboxHat) - 1
-	minima := num.ArrayMinimum(bbox[0][:], point)
-	num.ArrayCopy(bboxHat[0][:], minima)
-	maxima := num.ArrayMaximum(bbox[lastBbox][:], point)
-	num.ArrayCopy(bboxHat[lastBboxHat][:], maxima)
-	bSpan := num.ArraySub(bboxHat[lastBboxHat][:], bboxHat[0][:])
-	bRange := num.ArraySumFloat(bSpan)
-	r := num.RndUniform(0, bRange)
-	// r := rct.rnd.RndUniform(0, bRange)
-	spanSum := num.ArrayCumSum(bSpan)
+	minima := array.Minimum(bbox[0][:], point)
+	array.CopyFloat(bboxHat[0][:], minima)
+	maxima := array.Maximum(bbox[lastBbox][:], point)
+	array.CopyFloat(bboxHat[lastBboxHat][:], maxima)
+	bSpan := array.Subtract1D(bboxHat[lastBboxHat][:], bboxHat[0][:])
+	bRange := array.SumFloat(bSpan)
+	r := rct.Rng.Uniform(0, bRange)
+	spanSum := array.CumSum(bSpan)
 	cutDimension := math.MaxInt64
 	for j := range make([]int, len(spanSum)) {
 		if spanSum[j] >= r {

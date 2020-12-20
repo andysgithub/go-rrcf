@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"sort"
 )
 
 // WriteArray saves a 2D array of floats to a csv file
@@ -25,18 +26,23 @@ func WriteArray(data [][]float64, fileName string) {
 	csvwriter.Flush()
 }
 
-// Min -
-func Min(a, b float64) float64 {
-	if a < b {
-		return a
+// SortMap converts a map to a slice of values and returns the sorted slice
+func SortMap(m map[int]float64) []float64 {
+	values := []float64{}
+	for _, value := range m {
+		values = append(values, value)
 	}
-	return b
+
+	sort.Slice(values, func(i, j int) bool {
+		return values[i] < values[j]
+	})
+	return values
 }
 
-// Max -
-func Max(a, b float64) float64 {
-	if a > b {
-		return a
+// BoolToFloat converts a boolean to 1.0 (true) or 0.0 (false)
+func BoolToFloat(b bool) float64 {
+	if b {
+		return 1.
 	}
-	return b
+	return 0.
 }

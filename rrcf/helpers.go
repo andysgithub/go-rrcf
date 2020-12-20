@@ -1,6 +1,6 @@
 package rrcf
 
-import "github.com/andysgithub/go-rrcf/num"
+import "github.com/andysgithub/go-rrcf/array"
 
 // IncrementDepth increments the depth attribute of a leaf
 func (rcTree RCTree) IncrementDepth(node *Node, increment int) {
@@ -20,11 +20,11 @@ func (rcTree RCTree) GetNodes(node *Node, stack []Node) []Node {
 
 // ComputeBbox computes the bbox of a point
 func (rcTree RCTree) ComputeBbox(x *Node, mins []float64, maxes []float64) {
-	lt := num.ArrayLt(x.Leaf.x, mins)
-	gt := num.ArrayGt(x.Leaf.x, maxes)
+	lt := array.LtFloat(x.Leaf.x, mins)
+	gt := array.GtFloat(x.Leaf.x, maxes)
 
-	num.ArrayCopyWhenTrue(mins, x.Leaf.x, lt)
-	num.ArrayCopyWhenTrue(maxes, x.Leaf.x, gt)
+	array.CopyFloatWhenTrue(mins, x.Leaf.x, lt)
+	array.CopyFloatWhenTrue(maxes, x.Leaf.x, gt)
 }
 
 // RemoveIndex removes the element at index and move all later values up

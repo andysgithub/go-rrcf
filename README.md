@@ -38,7 +38,7 @@ import (
 tree = rrcf.NewRCTree(nil, nil, 9, 0)
 
 for _, index := range indexes {
-    x := num.Randn1(2)
+    x := random.Normal1D(2)
     leafNode, err := tree.InsertPoint(x, index, 0)
 }
 ```

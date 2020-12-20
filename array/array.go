@@ -1,9 +1,9 @@
-package num
+package array
 
 import (
+	"fmt"
 	"math"
-
-	"github.com/andysgithub/go-rrcf/utils"
+	"strings"
 )
 
 // Around evenly rounds to the given number of decimals
@@ -96,9 +96,9 @@ func FlatNonZero(array []bool) []int {
 	return nonZero
 }
 
-// ArrayEqInt compares an array of ints to a given value
+// EqualInt compares an array of ints to a given value
 // Returned array elements are true if equal to value
-func ArrayEqInt(array []int, value int) []bool {
+func EqualInt(array []int, value int) []bool {
 	var isEqual []bool
 
 	for _, element := range array {
@@ -107,9 +107,9 @@ func ArrayEqInt(array []int, value int) []bool {
 	return isEqual
 }
 
-// ArrayEqFloat compares an array of floats to a given value
+// EqualFloat compares an array of floats to a given value
 // Returned array elements are true if equal to value
-func ArrayEqFloat(array []float64, value float64) []bool {
+func EqualFloat(array []float64, value float64) []bool {
 	var isEqual []bool
 
 	for _, element := range array {
@@ -118,9 +118,9 @@ func ArrayEqFloat(array []float64, value float64) []bool {
 	return isEqual
 }
 
-// ArrayCompareBool compares two boolean arrays
+// CompareBool compares two boolean arrays
 // Returns true if all array elements are equal
-func ArrayCompareBool(array1 []bool, array2 []bool) bool {
+func CompareBool(array1 []bool, array2 []bool) bool {
 	for i := range array1 {
 		if array1[i] != array2[i] {
 			return false
@@ -129,9 +129,9 @@ func ArrayCompareBool(array1 []bool, array2 []bool) bool {
 	return true
 }
 
-// ArrayCompareFloat compares two float arrays
+// CompareFloat compares two float arrays
 // Returns true if all array elements are equal
-func ArrayCompareFloat(array1 []float64, array2 []float64) bool {
+func CompareFloat(array1 []float64, array2 []float64) bool {
 	for i := range array1 {
 		if array1[i] != array2[i] {
 			return false
@@ -140,9 +140,9 @@ func ArrayCompareFloat(array1 []float64, array2 []float64) bool {
 	return true
 }
 
-// ArrayLt compares two arrays of floats
+// LtFloat compares two arrays of floats
 // Returned array elements are true if array1 less than array2
-func ArrayLt(array1 []float64, array2 []float64) []bool {
+func LtFloat(array1 []float64, array2 []float64) []bool {
 	var isLt []bool
 
 	for i := range array1 {
@@ -151,9 +151,9 @@ func ArrayLt(array1 []float64, array2 []float64) []bool {
 	return isLt
 }
 
-// ArrayGt compares two arrays of floats
+// GtFloat compares two arrays of floats
 // Returned array elements are true if array1 greater than array2
-func ArrayGt(array1 []float64, array2 []float64) []bool {
+func GtFloat(array1 []float64, array2 []float64) []bool {
 	var isGt []bool
 
 	for i := range array1 {
@@ -162,9 +162,9 @@ func ArrayGt(array1 []float64, array2 []float64) []bool {
 	return isGt
 }
 
-// ArrayLeq compares an array of floats to a given value
+// LeqFloat compares an array of floats to a given value
 // Returned array elements are true if less than or equal to value
-func ArrayLeq(array []float64, value float64) []bool {
+func LeqFloat(array []float64, value float64) []bool {
 	var isLeq []bool
 
 	for _, element := range array {
@@ -173,8 +173,8 @@ func ArrayLeq(array []float64, value float64) []bool {
 	return isLeq
 }
 
-// ArrayAnd returns the logical and of two boolean arrays
-func ArrayAnd(array1 []bool, array2 []bool) []bool {
+// AndBool returns the logical and of two boolean arrays
+func AndBool(array1 []bool, array2 []bool) []bool {
 	var andArray []bool
 
 	for i := range array1 {
@@ -183,8 +183,8 @@ func ArrayAnd(array1 []bool, array2 []bool) []bool {
 	return andArray
 }
 
-// ArrayNot returns the inverse of a boolean array
-func ArrayNot(array []bool) []bool {
+// NotBool returns the inverse of a boolean array
+func NotBool(array []bool) []bool {
 	var inverseArray []bool
 
 	for _, element := range array {
@@ -193,8 +193,8 @@ func ArrayNot(array []bool) []bool {
 	return inverseArray
 }
 
-// ArrayDuplicate copies a 2D array of floats by value and returns the copy
-func ArrayDuplicate(array [][]float64) [][]float64 {
+// DuplicateFloat copies a 2D array of floats by value and returns the copy
+func DuplicateFloat(array [][]float64) [][]float64 {
 	rows := len(array)
 	cols := len(array[0])
 
@@ -208,15 +208,15 @@ func ArrayDuplicate(array [][]float64) [][]float64 {
 	return duplicate
 }
 
-// ArrayCopy copies array2 elements into array1
-func ArrayCopy(array1 []float64, array2 []float64) {
+// CopyFloat copies array2 elements into array1
+func CopyFloat(array1 []float64, array2 []float64) {
 	for i, element := range array2 {
 		array1[i] = element
 	}
 }
 
-// ArrayCopyWhenTrue copies array2 elements into array1 where the bools array element is true
-func ArrayCopyWhenTrue(array1 []float64, array2 []float64, bools []bool) {
+// CopyFloatWhenTrue copies array2 elements into array1 where the bools array element is true
+func CopyFloatWhenTrue(array1 []float64, array2 []float64, bools []bool) {
 	for i, element := range array2 {
 		if bools[i] {
 			array1[i] = element
@@ -224,8 +224,8 @@ func ArrayCopyWhenTrue(array1 []float64, array2 []float64, bools []bool) {
 	}
 }
 
-// ArrayIndicesInt returns a slice containing array integers for the specified indices
-func ArrayIndicesInt(array []int, indices []int) []int {
+// IndicesInt returns a slice containing array integers for the specified indices
+func IndicesInt(array []int, indices []int) []int {
 	var returnSlice []int
 
 	for _, index := range indices {
@@ -234,8 +234,8 @@ func ArrayIndicesInt(array []int, indices []int) []int {
 	return returnSlice
 }
 
-// ArrayBoolFloat returns a slice containing array rows where the corresponding bool is true
-func ArrayBoolFloat(array [][]float64, indices []bool) [][]float64 {
+// WhereTrueFloat returns a slice containing array rows where the corresponding bool is true
+func WhereTrueFloat(array [][]float64, indices []bool) [][]float64 {
 	var returnSlice [][]float64
 
 	for index, isTrue := range indices {
@@ -278,8 +278,8 @@ func MinColValues(array [][]float64) []float64 {
 	return minValues
 }
 
-// ArrayMaxValue returns the maximum value in a list
-func ArrayMaxValue(array []float64) float64 {
+// MaxValue returns the maximum value in a list
+func MaxValue(array []float64) float64 {
 	maxVal := -math.MaxFloat64
 
 	for _, value := range array {
@@ -288,30 +288,30 @@ func ArrayMaxValue(array []float64) float64 {
 	return maxVal
 }
 
-// ArrayMaximum compares two arrays and returns a new array containing the element-wise maxima
-func ArrayMaximum(array1 []float64, array2 []float64) []float64 {
+// Maximum compares two arrays and returns a new array containing the element-wise maxima
+func Maximum(array1 []float64, array2 []float64) []float64 {
 	var maxValues []float64
 	cols := len(array1)
 
 	for col := 0; col < cols; col++ {
-		maxValues = append(maxValues, utils.Max(array1[col], array2[col]))
+		maxValues = append(maxValues, math.Max(array1[col], array2[col]))
 	}
 	return maxValues
 }
 
-// ArrayMinimum compares two arrays and returns a new array containing the element-wise minima
-func ArrayMinimum(array1 []float64, array2 []float64) []float64 {
+// Minimum compares two arrays and returns a new array containing the element-wise minima
+func Minimum(array1 []float64, array2 []float64) []float64 {
 	var minValues []float64
 	cols := len(array1)
 
 	for col := 0; col < cols; col++ {
-		minValues = append(minValues, utils.Min(array1[col], array2[col]))
+		minValues = append(minValues, math.Min(array1[col], array2[col]))
 	}
 	return minValues
 }
 
-// ArraySumFloat returns the total of the elements in a list
-func ArraySumFloat(array []float64) float64 {
+// SumFloat returns the total of the elements in a list
+func SumFloat(array []float64) float64 {
 	total := float64(0)
 
 	for _, element := range array {
@@ -320,8 +320,8 @@ func ArraySumFloat(array []float64) float64 {
 	return total
 }
 
-// ArraySub returns the difference between the elements of two lists
-func ArraySub(array1 []float64, array2 []float64) []float64 {
+// Subtract1D returns the difference between the elements of two lists
+func Subtract1D(array1 []float64, array2 []float64) []float64 {
 	var returnSlice []float64
 
 	for i := range array1 {
@@ -330,8 +330,8 @@ func ArraySub(array1 []float64, array2 []float64) []float64 {
 	return returnSlice
 }
 
-// ArraySubVal subtracts the specified value from the elements of a list
-func ArraySubVal(array []float64, value float64) []float64 {
+// SubtractVal1D subtracts the specified value from the elements of a list
+func SubtractVal1D(array []float64, value float64) []float64 {
 	var returnSlice []float64
 
 	for _, element := range array {
@@ -340,8 +340,8 @@ func ArraySubVal(array []float64, value float64) []float64 {
 	return returnSlice
 }
 
-// ArrayMul returns the product of the elements of two lists
-func ArrayMul(array1 []float64, array2 []float64) []float64 {
+// Multiply1D returns the product of the elements of two lists
+func Multiply1D(array1 []float64, array2 []float64) []float64 {
 	var returnSlice []float64
 
 	for i := range array1 {
@@ -350,8 +350,8 @@ func ArrayMul(array1 []float64, array2 []float64) []float64 {
 	return returnSlice
 }
 
-// ArrayMulVal returns the elements of a list multiplied by the specified value
-func ArrayMulVal(array []float64, value float64) []float64 {
+// MultiplyVal1D returns the elements of a list multiplied by the specified value
+func MultiplyVal1D(array []float64, value float64) []float64 {
 	var returnSlice []float64
 
 	for _, element := range array {
@@ -360,8 +360,8 @@ func ArrayMulVal(array []float64, value float64) []float64 {
 	return returnSlice
 }
 
-// Array2DMulVal returns the elements of a 2D array multiplied by the specified value
-func Array2DMulVal(array [][]float64, value float64) [][]float64 {
+// MultiplyVal2D returns the elements of a 2D array multiplied by the specified value
+func MultiplyVal2D(array [][]float64, value float64) [][]float64 {
 	rows := len(array)
 	cols := len(array[0])
 
@@ -375,8 +375,8 @@ func Array2DMulVal(array [][]float64, value float64) [][]float64 {
 	return result
 }
 
-// ArrayMulValInt returns the elements of a integer list multiplied by the specified float value
-func ArrayMulValInt(array []int, value float64) []float64 {
+// MultiplyVal1DInt returns the elements of a integer list multiplied by the specified float value
+func MultiplyVal1DInt(array []int, value float64) []float64 {
 	var returnSlice []float64
 
 	for _, element := range array {
@@ -385,8 +385,8 @@ func ArrayMulValInt(array []int, value float64) []float64 {
 	return returnSlice
 }
 
-// Array2DAdd returns the sum of two 2D arrays
-func Array2DAdd(array1 [][]float64, array2 [][]float64) [][]float64 {
+// AddFloat2D returns the sum of two 2D arrays
+func AddFloat2D(array1 [][]float64, array2 [][]float64) [][]float64 {
 	rows := len(array1)
 	cols := len(array1[0])
 
@@ -400,8 +400,8 @@ func Array2DAdd(array1 [][]float64, array2 [][]float64) [][]float64 {
 	return result
 }
 
-// ArrayAddVal returns the elements of a list multiplied by the specified value
-func ArrayAddVal(array []float64, value float64) []float64 {
+// AddVal1D returns the elements of a list multiplied by the specified value
+func AddVal1D(array []float64, value float64) []float64 {
 	var returnSlice []float64
 
 	for _, element := range array {
@@ -410,8 +410,8 @@ func ArrayAddVal(array []float64, value float64) []float64 {
 	return returnSlice
 }
 
-// ArrayDivVal returns the elements of a list divided by the specified value
-func ArrayDivVal(array []float64, value float64) []float64 {
+// DivVal1D returns the elements of a list divided by the specified value
+func DivVal1D(array []float64, value float64) []float64 {
 	var returnSlice []float64
 
 	for _, element := range array {
@@ -429,15 +429,15 @@ func GetColumn(array [][]float64, columnIndex int) []float64 {
 	return column
 }
 
-// ArrayFillElements fills the elements of a list with the specified value
-func ArrayFillElements(array []float64, rowStart int, rowEnd int, value float64) {
+// FillElements fills the elements of a list with the specified value
+func FillElements(array []float64, rowStart int, rowEnd int, value float64) {
 	for i := rowStart; i <= rowEnd; i++ {
 		array[i] = value
 	}
 }
 
-// ArrayFillRows fills array rows with the specified value
-func ArrayFillRows(array [][]float64, rowStart int, rowEnd int, value float64) {
+// FillRows fills array rows with the specified value
+func FillRows(array [][]float64, rowStart int, rowEnd int, value float64) {
 	for i := rowStart; i <= rowEnd; i++ {
 		for j := 0; j < len(array[0]); j++ {
 			array[i][j] = value
@@ -445,15 +445,15 @@ func ArrayFillRows(array [][]float64, rowStart int, rowEnd int, value float64) {
 	}
 }
 
-// ArrayFillColumn fills array column with the specified value
-func ArrayFillColumn(array [][]float64, col int, rowStart int, rowEnd int, value float64) {
+// FillColumn fills array column with the specified value
+func FillColumn(array [][]float64, col int, rowStart int, rowEnd int, value float64) {
 	for i := rowStart; i <= rowEnd; i++ {
 		array[i][col] = value
 	}
 }
 
-// ArraySumBool totals the true values in the list
-func ArraySumBool(array []bool) int {
+// SumTrue totals the true values in the list
+func SumTrue(array []bool) int {
 	sum := 0
 	for _, isTrue := range array {
 		if isTrue {
@@ -463,8 +463,8 @@ func ArraySumBool(array []bool) int {
 	return sum
 }
 
-// ArrayVStack stacks the sequence of input arrays vertically to make a single array
-func ArrayVStack(array1 []float64, array2 []float64) [][]float64 {
+// VStack stacks the sequence of input arrays vertically to make a single array
+func VStack(array1 []float64, array2 []float64) [][]float64 {
 	var stacked [][]float64
 
 	stacked = append(stacked, array1)
@@ -482,8 +482,8 @@ func Full(length int, fillValue float64) []float64 {
 	return filledArray
 }
 
-// ArrayEmpty returns a zeroed 2D array
-func ArrayEmpty(rows int, cols int) [][]float64 {
+// Zero2D returns a zeroed 2D array
+func Zero2D(rows int, cols int) [][]float64 {
 	array := make([][]float64, rows)
 	for i := 0; i < rows; i++ {
 		array[i] = make([]float64, cols)
@@ -522,8 +522,8 @@ func AnyEqFloat(array1 []float64, array2 []float64) bool {
 	return false
 }
 
-// ArrayContainsBool returns true if the boolean array contains the boolean value
-func ArrayContainsBool(array []bool, value bool) bool {
+// ContainsBool returns true if the boolean array contains the boolean value
+func ContainsBool(array []bool, value bool) bool {
 	for _, element := range array {
 		if element == value {
 			return true
@@ -552,8 +552,8 @@ func AllTrueBool(array []bool) bool {
 	return true
 }
 
-// ArrayCumSum returns the cumulative sum of the elements in a list
-func ArrayCumSum(array []float64) []float64 {
+// CumSum returns the cumulative sum of the elements in a list
+func CumSum(array []float64) []float64 {
 	accumulator := float64(0)
 	var result []float64
 
@@ -564,8 +564,8 @@ func ArrayCumSum(array []float64) []float64 {
 	return result
 }
 
-// ArraySin returns the sine of the elements in a list
-func ArraySin(array []float64) []float64 {
+// Sin returns the sine of the elements in a list
+func Sin(array []float64) []float64 {
 	var result []float64
 
 	for _, value := range array {
@@ -574,9 +574,9 @@ func ArraySin(array []float64) []float64 {
 	return result
 }
 
-// ArrayReshapeRow converts a list into a 2D array with one row
-func ArrayReshapeRow(array []float64) [][]float64 {
-	result := ArrayEmpty(1, len(array))
+// ReshapeRow converts a list into a 2D array with one row
+func ReshapeRow(array []float64) [][]float64 {
+	result := Zero2D(1, len(array))
 
 	for i, value := range array {
 		result[0][i] = value
@@ -584,9 +584,9 @@ func ArrayReshapeRow(array []float64) [][]float64 {
 	return result
 }
 
-// ArrayReshapeCol converts a list into a 2D array with one column
-func ArrayReshapeCol(array []float64) [][]float64 {
-	result := ArrayEmpty(len(array), 1)
+// ReshapeCol converts a list into a 2D array with one column
+func ReshapeCol(array []float64) [][]float64 {
+	result := Zero2D(len(array), 1)
 
 	for i, value := range array {
 		result[i][0] = value
@@ -594,8 +594,8 @@ func ArrayReshapeCol(array []float64) [][]float64 {
 	return result
 }
 
-// ArraySample produces a 2D array consisting of sampled rows from the original array
-func ArraySample(array [][]float64, samples []int) [][]float64 {
+// Sample produces a 2D array consisting of sampled rows from the original array
+func Sample(array [][]float64, samples []int) [][]float64 {
 	rows := len(samples)
 	cols := len(array[0])
 
@@ -608,4 +608,17 @@ func ArraySample(array [][]float64, samples []int) [][]float64 {
 		}
 	}
 	return sampled
+}
+
+// SliceToString returns a string of array values separated by the specified character
+func SliceToString(a []float64, sep string) string {
+	if len(a) == 0 {
+		return ""
+	}
+
+	b := make([]string, len(a))
+	for i, v := range a {
+		b[i] = fmt.Sprintf("%f", v)
+	}
+	return strings.Join(b, sep)
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/andysgithub/go-rrcf/num"
+	"github.com/andysgithub/go-rrcf/random"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,8 +26,8 @@ func TestInit(t *testing.T) {
 	d = 3
 
 	X = num.Randn2(n, d)
-	Z := num.ArrayDuplicate(X)
-	num.ArrayFillRows(Z, 90, 99, float64(1))
+	Z := num.DuplicateFloat(X)
+	num.FillRows(Z, 90, 99, float64(1))
 
 	tree = NewRCTree(X, nil, 9, 0, 1)
 
@@ -102,7 +103,7 @@ func TestInsertBatch(t *testing.T) {
 
 	// Check stored bounding boxes and leaf counts after inserting points
 	for _, index := range indexes {
-		x := num.Randn1(d)
+		x := random.Normal1D(d)
 		_, err := tree.InsertPoint(x, index, 0)
 		if err == nil {
 			var branches []Node
@@ -168,7 +169,7 @@ func TestShingle(t *testing.T) {
 	step1 := shingle.Next()
 
 	message := fmt.Sprintf("Shingles misaligned: %v vs %v", step0[1], step1[0])
-	assert.True(t, num.ArrayCompareFloat(step0[1], step1[0]), message)
+	assert.True(t, num.CompareFloat(step0[1], step1[0]), message)
 }
 
 func TestInsertDepth(t *testing.T) {

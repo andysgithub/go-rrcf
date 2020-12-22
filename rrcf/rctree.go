@@ -30,7 +30,7 @@ func NewRCTree(X [][]float64, indexLabels []int, precision int, randomState inte
 	switch randomState.(type) {
 	case int:
 		// Random number generation with provided seed
-		rct.Rng = random.NewRandomState(randomState.(int64))
+		rct.Rng = random.NewRandomState(int64(randomState.(int)))
 	case *random.RandomState:
 		// The existing RandomState instance
 		rct.Rng = randomState.(*random.RandomState)

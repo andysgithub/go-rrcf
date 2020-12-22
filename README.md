@@ -8,11 +8,11 @@ Based on the Python rrcf project at https://github.com/kLabUM/rrcf
 
 The *Robust Random Cut Forest* (RRCF) algorithm is an ensemble method for detecting outliers in streaming data. RRCF offers a number of features that many competing anomaly detection algorithms lack:
 
-- Designed to handle streaming data.
-- Performs well on high-dimensional data.
-- Reduces the influence of irrelevant dimensions.
-- Gracefully handles duplicates and near-duplicates that could otherwise mask the presence of outliers.
-- Features an anomaly-scoring algorithm with a clear underlying statistical meaning.
+- Designed to handle streaming data
+- Performs well on high-dimensional data
+- Reduces the influence of irrelevant dimensions
+- Gracefully handles duplicates and near-duplicates that could otherwise mask the presence of outliers
+- Features an anomaly-scoring algorithm with a clear underlying statistical meaning
 
 ## Robust random cut trees
 
@@ -22,23 +22,25 @@ A robust random cut tree (RRCT) is a binary search tree that can be used to dete
 
 ```go
 import (
-	"github.com/andysgithub/go-rrcf/num"
+	"github.com/andysgithub/go-rrcf/random"
 )
     // A random cut tree can be instantiated from a point set (n x d)
-	X = num.Randn2(100, 2)
-	tree = rrcf.NewRCTree(X, nil, 9, 0)
+    rnd := random.NewRandomState(0)
+	X = rnd.Normal2D(100, 2)
+	tree = rrcf.NewRCTree(X, nil, 9, nil)
 
     // A random cut tree can also be instantiated with no points
-    tree = rrcf.NewRCTree(nil, nil, 0, 0)
+    tree = rrcf.NewRCTree(nil, nil, 0, nil)
 ```
 
 ### Inserting points
 
 ```go
-tree = rrcf.NewRCTree(nil, nil, 9, 0)
+rnd := random.NewRandomState(0)
+tree = rrcf.NewRCTree(nil, nil, 9, nil)
 
 for _, index := range indexes {
-    x := random.Normal1D(2)
+    x := rnd.Normal1D(2)
     leafNode, err := tree.InsertPoint(x, index, 0)
 }
 ```

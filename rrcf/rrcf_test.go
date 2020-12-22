@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/andysgithub/go-rrcf/num"
+	"github.com/andysgithub/go-rrcf/array"
 	"github.com/andysgithub/go-rrcf/random"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,22 +19,24 @@ var (
 	n                   int
 	d                   int
 	X                   [][]float64
+	rnd                 *random.RandomState
 )
 
 func TestInit(t *testing.T) {
 	n = 100
 	d = 3
+	rnd := random.NewRandomState(0)
 
-	X = num.Randn2(n, d)
-	Z := num.DuplicateFloat(X)
-	num.FillRows(Z, 90, 99, float64(1))
+	X = rnd.Normal2D(n, d)
+	Z := array.DuplicateFloat(X)
+	array.FillRows(Z, 90, 99, float64(1))
 
-	tree = NewRCTree(X, nil, 9, 0, 1)
+	tree = NewRCTree(X, nil, 9, nil)
 
-	duplicateTree = NewRCTree(Z, nil, 9, 0, 2)
+	duplicateTree = NewRCTree(Z, nil, 9, nil)
 
-	deck := num.Arange(n)
-	deck = num.RndShuffle(deck)
+	deck := array.Arange(n)
+	deck = rnd.Shuffle(deck)
 	indexes = deck[:5]
 }
 
@@ -92,7 +94,7 @@ func TestForgetBatch(t *testing.T) {
 			assert.Equal(t, leafcount, node.n, fmt.Sprintf("%f - Computed: %d  Stored: %d\n", forgotten.Leaf.x, leafcount, node.n))
 
 			bbox := tree.GetBbox(&node)
-			result := num.AllClose(bbox, node.b, math.Pow(10, -8))
+			result := array.AllClose(bbox, node.b, math.Pow(10, -8))
 			assert.True(t, result, fmt.Sprintf("%f - Computed: %d  Stored: %d\n", forgotten.Leaf.x, leafcount, node.n))
 		}
 	}
@@ -103,7 +105,7 @@ func TestInsertBatch(t *testing.T) {
 
 	// Check stored bounding boxes and leaf counts after inserting points
 	for _, index := range indexes {
-		x := random.Normal1D(d)
+		x := rnd.Normal1D(d)
 		_, err := tree.InsertPoint(x, index, 0)
 		if err == nil {
 			var branches []Node
@@ -113,7 +115,7 @@ func TestInsertBatch(t *testing.T) {
 				assert.Equal(t, leafCount, node.n, fmt.Sprintf("Computed: %d  Stored: %d\n", leafCount, node.n))
 
 				bbox := tree.GetBbox(&node)
-				result := num.AllClose(bbox, node.b, math.Pow(10, -8))
+				result := array.AllClose(bbox, node.b, math.Pow(10, -8))
 				assert.True(t, result, fmt.Sprintf("Computed: %v  Stored: %v\n", bbox, node.b))
 			}
 		}
@@ -169,11 +171,11 @@ func TestShingle(t *testing.T) {
 	step1 := shingle.Next()
 
 	message := fmt.Sprintf("Shingles misaligned: %v vs %v", step0[1], step1[0])
-	assert.True(t, num.CompareFloat(step0[1], step1[0]), message)
+	assert.True(t, array.CompareFloat(step0[1], step1[0]), message)
 }
 
 func TestInsertDepth(t *testing.T) {
-	tree = NewRCTree(nil, nil, 0, 0, 1)
+	tree = NewRCTree(nil, nil, 0, 0)
 
 	tree.InsertPoint([]float64{0., 0.}, 0, 0)
 	tree.InsertPoint([]float64{0., 0.}, 1, 0)

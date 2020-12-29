@@ -1,12 +1,10 @@
 package main
 
 import (
-	"math"
 	"testing"
 
 	"github.com/andysgithub/go-rrcf/array"
 	"github.com/andysgithub/go-rrcf/random"
-	"github.com/andysgithub/go-rrcf/rrcf"
 	"github.com/andysgithub/go-rrcf/utils"
 )
 
@@ -20,42 +18,28 @@ func TestTrials(t *testing.T) {
 
 // StreamingTrial shows how the algorithm can be used to detect anomalies in streaming time series data
 func StreamingTrial() [][]float64 {
-	// Generate data
-	n := 730
-	A := 50
-	center := 100
-	phi := 30
-	T := 2.0 * math.Pi / 100
-	t := array.Arange(n)
-
-	diff := array.SubtractVal1D(array.MultiplyVal1DInt(t, T), float64(phi)*T)
-	mul := array.MultiplyVal1D(array.Sin(diff), float64(A))
-	sin := array.AddVal1D(mul, float64(center))
-
-	array.FillElements(sin, 235, 255, float64(80))
+	points, err := utils.ReadFromCsv("data/sin.csv")
+	if err != nil {
+		return nil
+	}
 
 	// Construct a forest of empty trees
-	token := InitRRCF(40, 256, 0)
+	token := InitRRCF(40, 256, 0, 3)
 	NewEmptyForest(token)
-
-	// Use the "shingle" generator to create a rolling window
-	shingles := rrcf.NewShingleList(sin, 3)
 
 	// Create a map to store anomaly score of each point
 	avgScore := make(map[int]float64)
 
-	// For each shingle
-	for sampleIndex := 0; sampleIndex < shingles.TotalSamples; sampleIndex++ {
-		// Update the forest with this shingle
-		shingle := shingles.NextInList()
-		avgScore[sampleIndex] = UpdatePoint(token, sampleIndex, shingle)
+	// For each point
+	for sampleIndex, point := range points {
+		// Update the forest with this point
+		avgScore[sampleIndex] = UpdateForest(token, sampleIndex, point)
 	}
 
 	// Compile points for plotting
-	plotPoints := array.Zero2D(shingles.TotalSamples, 2)
-
-	for sampleIndex := 0; sampleIndex < shingles.TotalSamples; sampleIndex++ {
-		plotPoints[sampleIndex][0] = sin[sampleIndex]
+	plotPoints := array.Zero2D(len(points), 2)
+	for sampleIndex, point := range points {
+		plotPoints[sampleIndex][0] = point[0]
 		plotPoints[sampleIndex][1] = avgScore[sampleIndex]
 	}
 
@@ -86,7 +70,7 @@ func BatchTrial() [][]float64 {
 	sampleSizeRange := []int{int(n / treeSize), treeSize}
 
 	// Construct forest
-	token := InitRRCF(numTrees, treeSize, n)
+	token := InitRRCF(numTrees, treeSize, n, 0)
 
 	for i := 0; GetTotalTrees(token) < numTrees; i++ {
 		// Select random subsets of points uniformly

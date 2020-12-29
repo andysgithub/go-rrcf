@@ -1,30 +1,32 @@
 package main
 
 import (
-	"C"
 	"crypto/rand"
 	"fmt"
 
+	"sort"
+
 	"github.com/andysgithub/go-rrcf/rrcf"
 )
-import "sort"
 
 // UserMap is a map of token/user pairs
 var UserMap map[string]*User
 
-// User struct re3cords the RRCF details for one user
+// User struct records the RRCF details for one user
 type User struct {
-	Forest     []rrcf.RCTree
-	NumTrees   int
-	TreeSize   int
-	DataPoints int
+	Forest      []rrcf.RCTree
+	NumTrees    int
+	TreeSize    int
+	DataPoints  int
+	ShingleSize int
+	Shingle     []float64
 }
 
 func main() {
 }
 
-//export InitRRCF
-func InitRRCF(numTrees int, treeSize int, dataPoints int) string {
+// InitRRCF -
+func InitRRCF(numTrees int, treeSize int, dataPoints int, shingleSize int) string {
 	if UserMap == nil {
 		UserMap = make(map[string]*User)
 	}
@@ -36,16 +38,17 @@ func InitRRCF(numTrees int, treeSize int, dataPoints int) string {
 
 	// Add key token to user map
 	UserMap[token] = &User{
-		NumTrees:   numTrees,
-		TreeSize:   treeSize,
-		DataPoints: dataPoints,
+		NumTrees:    numTrees,
+		TreeSize:    treeSize,
+		DataPoints:  dataPoints,
+		ShingleSize: shingleSize,
 	}
 
 	// Return the token
 	return token
 }
 
-//export NewEmptyForest
+// NewEmptyForest -
 func NewEmptyForest(token string) {
 	numTrees := UserMap[token].NumTrees
 	for treeIndex := 0; treeIndex < numTrees; treeIndex++ {
@@ -53,23 +56,23 @@ func NewEmptyForest(token string) {
 	}
 }
 
-//export NewRCTree
+// NewRCTree -
 func NewRCTree(token string, X [][]float64, indexLabels []int, precision int, randomState interface{}) {
 	tree := rrcf.NewRCTree(X, indexLabels, precision, randomState)
 	UserMap[token].Forest = append(UserMap[token].Forest, tree)
 }
 
-//export GetTotalTrees
+// GetTotalTrees -
 func GetTotalTrees(token string) int {
 	return len(UserMap[token].Forest)
 }
 
-//export GetTotalLeaves
+// GetTotalLeaves -
 func GetTotalLeaves(token string, treeIndex int) int {
 	return len(UserMap[token].Forest[treeIndex].Leaves)
 }
 
-//export InsertPoint
+// InsertPoint -
 func InsertPoint(token string, treeIndex int, point []float64, index int, tolerance float64) error {
 	_, err := UserMap[token].Forest[treeIndex].InsertPoint(point, index, 0)
 	if err == nil {
@@ -78,17 +81,17 @@ func InsertPoint(token string, treeIndex int, point []float64, index int, tolera
 	return err
 }
 
-//export ForgetPoint
+// ForgetPoint -
 func ForgetPoint(token string, treeIndex int, index int) {
 	UserMap[token].Forest[treeIndex].ForgetPoint(index)
 }
 
-//export GetScore
+// GetScore -
 func GetScore(token string, treeIndex int, sampleIndex int) (float64, error) {
 	return UserMap[token].Forest[treeIndex].CoDisp(sampleIndex)
 }
 
-//export GetAverageScore
+// GetAverageScore -
 func GetAverageScore(token string) map[int]float64 {
 	// Create a map to store anomaly score of each point
 	avgScore := make(map[int]float64)
@@ -122,7 +125,7 @@ func GetAverageScore(token string) map[int]float64 {
 	return avgScore
 }
 
-//export UpdatePoint
+// UpdatePoint -
 func UpdatePoint(token string, sampleIndex int, point []float64) float64 {
 	treeSize := UserMap[token].TreeSize
 	numTrees := UserMap[token].NumTrees
@@ -146,7 +149,29 @@ func UpdatePoint(token string, sampleIndex int, point []float64) float64 {
 	return avgScore
 }
 
-//export UpdateBatch
+// UpdateForest maintains a shingle internally by retaining previous data points
+func UpdateForest(token string, sampleIndex int, point []float64) float64 {
+	data := point
+
+	if len(point) == 1 {
+		// Only one data point, so use shingles
+		shingleSize := UserMap[token].ShingleSize
+		data = UserMap[token].Shingle
+
+		data = append(data, point[0])
+		if len(data) > shingleSize {
+			data = data[1:]
+		}
+		UserMap[token].Shingle = data
+
+		if len(data) < shingleSize {
+			return 0
+		}
+	}
+
+	return UpdatePoint(token, sampleIndex, data)
+}
+
 // UpdateBatch returns the average scores for each point, and the next sample index
 func UpdateBatch(token string, sampleIndex int, points [][]float64) ([]float64, int) {
 	index := sampleIndex

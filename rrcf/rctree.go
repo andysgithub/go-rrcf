@@ -398,6 +398,9 @@ func (rct RCTree) CoDisp(param interface{}) (float64, error) {
 		if !ok {
 			return 0, fmt.Errorf("CoDisp parameter not recognised: %v", leaf)
 		}
+		if _, ok := rct.Leaves[index]; !ok {
+			return 0, fmt.Errorf("No such leaf index: %d", index)
+		}
 		leaf = rct.Leaves[index]
 	}
 

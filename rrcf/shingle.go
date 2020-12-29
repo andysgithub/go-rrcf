@@ -35,18 +35,20 @@ func (shingle Shingle) Next() [][]float64 {
 
 // ShingleList generates shingles (a rolling window) of a given size from a list
 type ShingleList struct {
-	Sequence []float64
-	Size     int
-	RowStart *int
+	Sequence     []float64
+	Size         int
+	RowStart     *int
+	TotalSamples int
 }
 
 // NewShingleList returns an initialised Shingle object
 func NewShingleList(sequence []float64, size int) *ShingleList {
 	rowStart := 0
 	shingle := ShingleList{
-		Sequence: sequence,
-		Size:     size,
-		RowStart: &rowStart,
+		Sequence:     sequence,
+		Size:         size,
+		RowStart:     &rowStart,
+		TotalSamples: len(sequence) - size,
 	}
 	return &shingle
 }

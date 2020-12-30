@@ -6,8 +6,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/andysgithub/go-rrcf/utils"
-
 	"sort"
 
 	"github.com/andysgithub/go-rrcf/array"
@@ -121,13 +119,10 @@ func GetScore(token string, treeIndex int, sampleIndex int) (float64, error) {
 	return UserMap[token].Forest[treeIndex].CoDisp(sampleIndex)
 }
 
-// GetAverageScore -
-func GetAverageScore(token string) map[int]float64 {
+// ScoreForest -
+func ScoreForest(token string) []float64 {
 	// Create a map to store anomaly score of each point
-	avgScore := make(map[int]float64)
-	for i := 0; i < UserMap[token].DataPoints; i++ {
-		avgScore[i] = 0.0
-	}
+	avgScore := make([]float64, UserMap[token].DataPoints)
 
 	index := make([]float64, UserMap[token].DataPoints)
 	for _, tree := range UserMap[token].Forest {
@@ -145,11 +140,7 @@ func GetAverageScore(token string) map[int]float64 {
 		}
 	}
 	for key := range avgScore {
-		if index[key] == 0 {
-			delete(avgScore, key)
-		} else {
-			avgScore[key] /= index[key]
-		}
+		avgScore[key] /= index[key]
 	}
 
 	return avgScore
@@ -157,11 +148,13 @@ func GetAverageScore(token string) map[int]float64 {
 
 // GetThreshold calculates the threshold for the given percentile
 func GetThreshold(token string, percentile float64) float64 {
-	score := GetAverageScore(token)
-	values := utils.SortMap(score)
-	thresholdIndex := math.Round(float64(len(values)) * percentile / 100)
+	scores := ScoreForest(token)
+	sort.Slice(scores, func(i, j int) bool {
+		return scores[i] < scores[j]
+	})
+	thresholdIndex := math.Round(float64(len(scores)) * percentile / 100)
 
-	return values[int(thresholdIndex)]
+	return scores[int(thresholdIndex)]
 }
 
 // UpdatePoint -

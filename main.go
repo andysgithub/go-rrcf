@@ -3,9 +3,15 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
+	"math"
+	"time"
+
+	"github.com/andysgithub/go-rrcf/utils"
 
 	"sort"
 
+	"github.com/andysgithub/go-rrcf/array"
+	"github.com/andysgithub/go-rrcf/random"
 	"github.com/andysgithub/go-rrcf/rrcf"
 )
 
@@ -25,8 +31,8 @@ type User struct {
 func main() {
 }
 
-// InitRRCF -
-func InitRRCF(numTrees int, treeSize int, dataPoints int, shingleSize int) string {
+// InitForest -
+func InitForest(numTrees int, treeSize int, data [][]float64, shingleSize int) string {
 	if UserMap == nil {
 		UserMap = make(map[string]*User)
 	}
@@ -36,12 +42,36 @@ func InitRRCF(numTrees int, treeSize int, dataPoints int, shingleSize int) strin
 	rand.Read(b)
 	token := fmt.Sprintf("%x", b)
 
+	dataPoints := 0
+	if data != nil {
+		dataPoints = len(data)
+	}
+
 	// Add key token to user map
 	UserMap[token] = &User{
 		NumTrees:    numTrees,
 		TreeSize:    treeSize,
 		DataPoints:  dataPoints,
 		ShingleSize: shingleSize,
+	}
+
+	if dataPoints == 0 {
+		NewEmptyForest(token)
+	} else {
+		sampleSizeRange := []int{int(dataPoints / treeSize), treeSize}
+		rnd := random.NewRandomState(time.Now().UTC().UnixNano())
+
+		for i := 0; GetTotalTrees(token) < numTrees; i++ {
+			// Select random subsets of points uniformly
+			rows := sampleSizeRange[0]
+			cols := sampleSizeRange[1]
+			ixs := rnd.Array(dataPoints, rows, cols)
+			for _, ix := range ixs[0 : rows-1] {
+				// Produce a new array as sampled rows from X
+				sampledX := array.Sample(data, ix)
+				NewRCTree(token, sampledX, ix, 9, nil)
+			}
+		}
 	}
 
 	// Return the token
@@ -123,6 +153,15 @@ func GetAverageScore(token string) map[int]float64 {
 	}
 
 	return avgScore
+}
+
+// GetThreshold calculates the threshold for the given percentile
+func GetThreshold(token string, percentile float64) float64 {
+	score := GetAverageScore(token)
+	values := utils.SortMap(score)
+	thresholdIndex := math.Round(float64(len(values)) * percentile / 100)
+
+	return values[int(thresholdIndex)]
 }
 
 // UpdatePoint -

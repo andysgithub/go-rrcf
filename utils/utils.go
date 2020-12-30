@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/andysgithub/go-rrcf/array"
 )
 
 // ReadFromCsv will read the csv file at filePath
@@ -103,4 +105,27 @@ func Make2dFloatArray(rows int, cols int) [][]float64 {
 	}
 
 	return values
+}
+
+// GetDataPoints compiles data points and score values into a 2D array of floats
+func GetDataPoints(points [][]float64, score map[int]float64, threshold float64) [][]float64 {
+	dataCols := len(points[0])
+	scoreCols := 1
+	if threshold > 0 {
+		scoreCols = 2
+	}
+
+	plotPoints := array.Zero2D(len(points), dataCols+scoreCols)
+
+	for row := range points {
+		// Store the data points for this row
+		for col, value := range points[row] {
+			plotPoints[row][col] = value
+		}
+		// Next column is the score for this row
+		plotPoints[row][dataCols] = score[row]
+		// Last column is above/below threshold (1/0)
+		plotPoints[row][dataCols+1] = utils.BoolToFloat(score[row] >= threshold)
+	}
+	return plotPoints
 }

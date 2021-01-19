@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/csv"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -11,8 +12,7 @@ import (
 	"github.com/andysgithub/go-rrcf/array"
 )
 
-// ReadFromCsv will read the csv file at filePath
-// and return its contents as a 2d array of floats
+// ReadFromCsv will read the csv file at filePath as a 2d array of floats
 func ReadFromCsv(filePath string) ([][]float64, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -33,9 +33,12 @@ func ReadFromCsv(filePath string) ([][]float64, error) {
 	return values, nil
 }
 
-// WriteArray saves a 2D array of floats to a csv file
-func WriteArray(data [][]float64, fileName string) {
-	csvFile, _ := os.Create(fileName)
+// WriteToCsv saves a 2D array of floats to a csv file
+func WriteToCsv(data [][]float64, fileName string) error {
+	csvFile, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
 	csvwriter := csv.NewWriter(csvFile)
 
 	for _, dataRow := range data {
@@ -50,6 +53,7 @@ func WriteArray(data [][]float64, fileName string) {
 	}
 
 	csvwriter.Flush()
+	return nil
 }
 
 // SortMap converts a map to a slice of values and returns the sorted slice
@@ -75,7 +79,7 @@ func BoolToFloat(b bool) float64 {
 
 // StringsToFloats converts a 2d array of strings into a 2d array of floats
 func StringsToFloats(stringValues [][]string) ([][]float64, error) {
-	values := Make2dFloatArray(len(stringValues), len(stringValues[0]))
+	values := array.Zero2D(len(stringValues), len(stringValues[0]))
 
 	for rowIndex := range values {
 		for colIndex := range values[rowIndex] {
@@ -97,18 +101,8 @@ func StringsToFloats(stringValues [][]string) ([][]float64, error) {
 	return values, nil
 }
 
-// Make2dFloatArray makes a new 2d array of floats
-func Make2dFloatArray(rows int, cols int) [][]float64 {
-	values := make([][]float64, rows)
-	for rowIndex := range values {
-		values[rowIndex] = make([]float64, cols)
-	}
-
-	return values
-}
-
 // GetDataPoints compiles data points and score values into a 2D array of floats
-func GetDataPoints(points [][]float64, score []float64, threshold float64) [][]float64 {
+func GetDataPoints(points [][]float64, score map[int]float64, threshold float64) [][]float64 {
 	dataCols := len(points[0])
 	scoreCols := 1
 	if threshold > 0 {
@@ -130,4 +124,14 @@ func GetDataPoints(points [][]float64, score []float64, threshold float64) [][]f
 		}
 	}
 	return plotPoints
+}
+
+// GetThreshold calculates the threshold for the given percentile
+func GetThreshold(scores map[int]float64, percentile float64) float64 {
+	// Sort the scores into numerical order
+	values := SortMap(scores)
+
+	thresholdIndex := math.Round(float64(len(values)) * percentile / 100)
+
+	return values[int(thresholdIndex)]
 }

@@ -5,13 +5,13 @@ import (
 	"io/ioutil"
 )
 
-// SaveTree -
+// SaveTree saves a tree as json data to the specified file
 func SaveTree(tree RCTree, filename string) {
 	treeJSON, _ := json.MarshalIndent(tree, "", " ")
 	ioutil.WriteFile(filename, treeJSON, 0644)
 }
 
-// SaveForest -
+// SaveForest saves a forest as json data to the specified file
 func SaveForest(forest []RCTree, filename string) {
 	forestJSON, _ := json.MarshalIndent(forest, "", " ")
 	ioutil.WriteFile(filename, forestJSON, 0644)

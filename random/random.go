@@ -6,7 +6,7 @@ import (
 	"github.com/andysgithub/go-rrcf/array"
 )
 
-// RandomState -
+// RandomState holds a reference to the random number generator for a specific instance
 type RandomState struct {
 	rnd *rand.Rand
 }
@@ -112,7 +112,7 @@ func (rng *RandomState) UniformArray(min float64, max float64, rows int, cols in
 	return rndArray
 }
 
-// Shuffle -
+// Shuffle randomises the ordering of rows in a slice of ints
 func (rng *RandomState) Shuffle(deck []int) []int {
 	rng.rnd.Shuffle(len(deck), func(i, j int) {
 		deck[i], deck[j] = deck[j], deck[i]

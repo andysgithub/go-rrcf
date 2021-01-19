@@ -3,10 +3,8 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
-	"math"
-	"time"
-
 	"sort"
+	"time"
 
 	"github.com/andysgithub/go-rrcf/array"
 	"github.com/andysgithub/go-rrcf/random"
@@ -29,7 +27,8 @@ type User struct {
 func main() {
 }
 
-// InitForest -
+// InitForest initialises a forest from the given source data
+// Returns a token to reference the forest for use in subsequent calls
 func InitForest(numTrees int, treeSize int, data [][]float64, shingleSize int) string {
 	if UserMap == nil {
 		UserMap = make(map[string]*User)
@@ -65,7 +64,7 @@ func InitForest(numTrees int, treeSize int, data [][]float64, shingleSize int) s
 			cols := sampleSizeRange[1]
 			ixs := rnd.Array(dataPoints, rows, cols)
 			for _, ix := range ixs[0 : rows-1] {
-				// Produce a new array as sampled rows from X
+				// Produce a new array as sampled rows from source data
 				sampledX := array.Sample(data, ix)
 				NewRCTree(token, sampledX, ix, 9, nil)
 			}
@@ -74,111 +73,6 @@ func InitForest(numTrees int, treeSize int, data [][]float64, shingleSize int) s
 
 	// Return the token
 	return token
-}
-
-// NewEmptyForest -
-func NewEmptyForest(token string) {
-	numTrees := UserMap[token].NumTrees
-	for treeIndex := 0; treeIndex < numTrees; treeIndex++ {
-		NewRCTree(token, nil, nil, 0, nil)
-	}
-}
-
-// NewRCTree -
-func NewRCTree(token string, X [][]float64, indexLabels []int, precision int, randomState interface{}) {
-	tree := rrcf.NewRCTree(X, indexLabels, precision, randomState)
-	UserMap[token].Forest = append(UserMap[token].Forest, tree)
-}
-
-// GetTotalTrees -
-func GetTotalTrees(token string) int {
-	return len(UserMap[token].Forest)
-}
-
-// GetTotalLeaves -
-func GetTotalLeaves(token string, treeIndex int) int {
-	return len(UserMap[token].Forest[treeIndex].Leaves)
-}
-
-// InsertPoint -
-func InsertPoint(token string, treeIndex int, point []float64, index int, tolerance float64) error {
-	_, err := UserMap[token].Forest[treeIndex].InsertPoint(point, index, 0)
-	if err == nil {
-		UserMap[token].DataPoints++
-	}
-	return err
-}
-
-// ForgetPoint -
-func ForgetPoint(token string, treeIndex int, index int) {
-	UserMap[token].Forest[treeIndex].ForgetPoint(index)
-}
-
-// GetScore -
-func GetScore(token string, treeIndex int, sampleIndex int) (float64, error) {
-	return UserMap[token].Forest[treeIndex].CoDisp(sampleIndex)
-}
-
-// ScoreForest -
-func ScoreForest(token string) []float64 {
-	// Create a map to store anomaly score of each point
-	avgScore := make([]float64, UserMap[token].DataPoints)
-
-	index := make([]float64, UserMap[token].DataPoints)
-	for _, tree := range UserMap[token].Forest {
-
-		keys := []int{}
-		for k := range tree.Leaves {
-			keys = append(keys, k)
-		}
-		sort.Ints(keys)
-
-		for _, key := range keys {
-			codisp, _ := tree.CoDisp(key)
-			avgScore[key] += codisp
-			index[key]++
-		}
-	}
-	for key := range avgScore {
-		avgScore[key] /= index[key]
-	}
-
-	return avgScore
-}
-
-// GetThreshold calculates the threshold for the given percentile
-func GetThreshold(token string, percentile float64) float64 {
-	scores := ScoreForest(token)
-	sort.Slice(scores, func(i, j int) bool {
-		return scores[i] < scores[j]
-	})
-	thresholdIndex := math.Round(float64(len(scores)) * percentile / 100)
-
-	return scores[int(thresholdIndex)]
-}
-
-// UpdatePoint -
-func UpdatePoint(token string, sampleIndex int, point []float64) float64 {
-	treeSize := UserMap[token].TreeSize
-	numTrees := UserMap[token].NumTrees
-	var avgScore float64
-
-	// For each tree in the forest
-	for treeIndex := 0; treeIndex < numTrees; treeIndex++ {
-		// If tree is above permitted size
-		if GetTotalLeaves(token, treeIndex) > treeSize {
-			// Drop the oldest point (FIFO)
-			ForgetPoint(token, treeIndex, sampleIndex-treeSize)
-		}
-		// Insert the new point into the tree
-		InsertPoint(token, treeIndex, point, sampleIndex, 0)
-
-		// Compute codisp on the new point
-		newScore, _ := GetScore(token, treeIndex, sampleIndex)
-		// Take the average over all trees
-		avgScore += newScore / float64(numTrees)
-	}
-	return avgScore
 }
 
 // UpdateForest maintains a shingle internally by retaining previous data points
@@ -204,14 +98,96 @@ func UpdateForest(token string, sampleIndex int, point []float64) float64 {
 	return UpdatePoint(token, sampleIndex, data)
 }
 
-// UpdateBatch returns the average scores for each point, and the next sample index
-func UpdateBatch(token string, sampleIndex int, points [][]float64) ([]float64, int) {
-	index := sampleIndex
-	var avgScore []float64
+// ScoreForest calculates the average score at each leaf across all trees
+func ScoreForest(token string) map[int]float64 {
+	// Create a map to store average scores at each leaf
+	avgScores := make(map[int]float64)
+	// Create a map to store the total occurences of each leaf index in the forest
+	leafTotals := make(map[int]float64)
 
-	for _, point := range points {
-		avgScore = append(avgScore, UpdatePoint(token, index, point))
-		index++
+	for _, tree := range UserMap[token].Forest {
+		keys := []int{}
+		for k := range tree.Leaves {
+			keys = append(keys, k)
+		}
+		sort.Ints(keys)
+
+		for _, key := range keys {
+			codisp, _ := tree.CoDisp(key)
+			avgScores[key] += codisp
+			leafTotals[key]++
+		}
 	}
-	return avgScore, index
+	for key := range avgScores {
+		avgScores[key] /= leafTotals[key]
+	}
+
+	return avgScores
+}
+
+// NewEmptyForest creates a forest of empty trees
+func NewEmptyForest(token string) {
+	numTrees := UserMap[token].NumTrees
+	for treeIndex := 0; treeIndex < numTrees; treeIndex++ {
+		NewRCTree(token, nil, nil, 0, nil)
+	}
+}
+
+// NewRCTree creates a new tree and appends it to the forest
+func NewRCTree(token string, X [][]float64, indexLabels []int, precision int, randomState interface{}) {
+	tree := rrcf.NewRCTree(X, indexLabels, precision, randomState)
+	UserMap[token].Forest = append(UserMap[token].Forest, tree)
+}
+
+// UpdatePoint inserts a new point into each tree and updates the score
+func UpdatePoint(token string, sampleIndex int, point []float64) float64 {
+	treeSize := UserMap[token].TreeSize
+	numTrees := UserMap[token].NumTrees
+	var avgScore float64
+
+	// For each tree in the forest
+	for treeIndex := 0; treeIndex < numTrees; treeIndex++ {
+		// If tree is above permitted size
+		if GetTotalLeaves(token, treeIndex) > treeSize {
+			// Drop the oldest point (FIFO)
+			ForgetPoint(token, treeIndex, sampleIndex-treeSize)
+		}
+		// Insert the new point into the tree
+		InsertPoint(token, treeIndex, point, sampleIndex, 0)
+
+		// Compute codisp on the new point
+		newScore, _ := GetScore(token, treeIndex, sampleIndex)
+		// Take the average over all trees
+		avgScore += newScore / float64(numTrees)
+	}
+	return avgScore
+}
+
+// InsertPoint inserts a point into a tree, creating a new leaf
+func InsertPoint(token string, treeIndex int, point []float64, index int, tolerance float64) error {
+	_, err := UserMap[token].Forest[treeIndex].InsertPoint(point, index, 0)
+	if err == nil {
+		UserMap[token].DataPoints++
+	}
+	return err
+}
+
+// ForgetPoint deletes a leaf from the specified tree
+func ForgetPoint(token string, treeIndex int, index int) {
+	UserMap[token].Forest[treeIndex].ForgetPoint(index)
+}
+
+// GetTotalTrees returns the total number of trees in the forest
+func GetTotalTrees(token string) int {
+	return len(UserMap[token].Forest)
+}
+
+// GetTotalLeaves returns the number of leaves in the specified tree
+func GetTotalLeaves(token string, treeIndex int) int {
+	return len(UserMap[token].Forest[treeIndex].Leaves)
+}
+
+// GetScore returns the collusive displacement for a leaf in the specified tree
+func GetScore(token string, treeIndex int, sampleIndex int) (float64, error) {
+	return UserMap[token].Forest[treeIndex].CoDisp(sampleIndex)
 }

@@ -55,10 +55,14 @@ deletedNode := tree.ForgetPoint(2)
 
 An example to detect outliers in a batch setting is included in main.go. Results of this trial can be found in the results/batch folder.
 
-![Image](/home/andy/go/src/github.com/andysgithub/go-rrcf/results/batch/plot.png) 
+The first plot shows the source data, with outliers occupying the central region of the plot. The results of the anomaly detection are shown in the second plot, with all outliers detected above an anomaly score of 60.
+
+![Image](https://github.com/andysgithub/go-rrcf/raw/master/results/batch/plot.png) 
 
 ## Streaming anomaly detection
 
 An example to detect anomalies in streaming time series data is also in main.go. Results can be found in the results/streaming folder.
 
-![Image](/home/andy/go/src/github.com/andysgithub/go-rrcf/results/streaming/plot.png) 
+Anomalous data is injected into the sine wave function shown in the first plot. These outliers are cleary signalled in the anomaly score output.
+
+![Image](https://github.com/andysgithub/go-rrcf/raw/master/results/streaming/plot.png) 

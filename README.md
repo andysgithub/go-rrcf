@@ -6,9 +6,9 @@ Based on the original Python rrcf project at https://github.com/kLabUM/rrcf.
 
 This Go version features an easy to use API suitable for implementing as a web service if required. As such the forest initialisation returns a token to be used in subsequent calls. The token identifies the user's forest data, allowing multiple users and forests to be supported.
 
-## About
+## The RRCF algorithm
 
-The *Robust Random Cut Forest* (RRCF) algorithm is an ensemble method for detecting outliers in streaming data. RRCF offers a number of features that many competing anomaly detection algorithms lack:
+The Robust Random Cut Forest (RRCF) algorithm is an ensemble method for detecting outliers in streaming data. RRCF offers a number of features that many competing anomaly detection algorithms lack:
 
 - Designed to handle streaming data
 - Performs well on high-dimensional data
@@ -18,26 +18,24 @@ The *Robust Random Cut Forest* (RRCF) algorithm is an ensemble method for detect
 
 ## Robust random cut trees
 
-A robust random cut tree (RRCT) is a binary search tree that can be used to detect outliers in a point set. A RRCT can be instantiated from a point set. Points can also be added and removed from an RRCT.
+A robust random cut tree (RRCT) is a binary search tree that can be used to detect outliers in a point set. Each tree can be instantiated from a point set, and points can be added and removed dynamically.
 
 ## Batch anomaly detection
 
 A batch file containing multi-dimensional data can be read as a csv file. This is used to initialise the forest, with a given number of trees and leaves on each. A map of anomaly scores is then produced by calling ScoreForest with the returned token:
 
-### Initialising and scoring the forest
-
 ```go
 import (
-	"github.com/andysgithub/go-rrcf/utils"
+    "github.com/andysgithub/go-rrcf/utils"
 )
-	// Get random 3D data with anomalies
-	points, _ := utils.ReadFromCsv("data/random3D.csv")
+    // Get random 3D data with anomalies
+    points, _ := utils.ReadFromCsv("data/random3D.csv")
 
-	// Construct a random forest
-	token := InitForest(100, 256, points, 0)
+    // Construct a random forest
+    token := InitForest(100, 256, points, 0)
 
-	// Compute average anomaly score
-	scores := ScoreForest(token)
+    // Compute average anomaly score
+    scores := ScoreForest(token)
 ```
 
 ### Test results
@@ -54,26 +52,24 @@ For use with streaming time series data, the forest is initialised with empty tr
 
 Anomaly scores are then collected by calling UpdateForest for each data point received:
 
-### Initialising and scoring the forest
-
 ```go
 import (
-	"github.com/andysgithub/go-rrcf/utils"
+    "github.com/andysgithub/go-rrcf/utils"
 )
-	// Get sine function data with anomalies
-	points, _ := utils.ReadFromCsv("data/sine.csv")
+    // Get sine function data with anomalies
+    points, _ := utils.ReadFromCsv("data/sine.csv")
 
-	// Construct a forest of empty trees
-	token := InitForest(40, 256, nil, 3)
+    // Construct a forest of empty trees
+    token := InitForest(40, 256, nil, 3)
 
-	// Create a map to store the anomaly score of each point
-	scores := make(map[int]float64)
+    // Create a map to store the anomaly score of each point
+    scores := make(map[int]float64)
 
-	// For each streamed data point
-	for sampleIndex, point := range points {
-		// Update the forest with this point and record the average score
-		scores[sampleIndex] = UpdateForest(token, sampleIndex, point)
-	}
+    // For each streamed data point
+    for sampleIndex, point := range points {
+        // Update the forest with this point and record the average score
+        scores[sampleIndex] = UpdateForest(token, sampleIndex, point)
+    }
 ```
 
 ### Test results
@@ -90,36 +86,36 @@ To improve the initial anomaly scores for streaming, the forest can be trained w
 
 ```go
 import (
-	"github.com/andysgithub/go-rrcf/utils"
+    "github.com/andysgithub/go-rrcf/utils"
 )
-	// Get sine function data for training
-	points, _ := utils.ReadFromCsv("data/training.csv")
+    // Get sine function data for training
+    points, _ := utils.ReadFromCsv("data/training.csv")
 
-	// Construct a forest of empty trees
-	token := InitForest(40, 256, nil, 3)
+    // Construct a forest of empty trees
+    token := InitForest(40, 256, nil, 3)
 
-	// For each training data point
-	for sampleIndex, point := range points {
-		// Update the forest with this point
-		UpdateForest(token, sampleIndex, point)
-	}
+    // For each training data point
+    for sampleIndex, point := range points {
+        // Update the forest with this point
+        UpdateForest(token, sampleIndex, point)
+    }
     lastIndex := len(points)
 ```
 
 Streamed data can then be presented to the newly-trained forest, as in the previous example:
 
 ```go
-	// Get sine function data with anomalies
-	points, _ = utils.ReadFromCsv("data/sine.csv")
+    // Get sine function data with anomalies
+    points, _ = utils.ReadFromCsv("data/sine.csv")
 
-	// Create a map to store the anomaly score of each point
-	scores := make(map[int]float64)
+    // Create a map to store the anomaly score of each point
+    scores := make(map[int]float64)
 
-	// For each streamed data point
-	for sampleIndex, point := range points {
-		// Update the forest with this point and record the average score
-		scores[sampleIndex] = UpdateForest(token, lastIndex+sampleIndex, point)
-	}
+    // For each streamed data point
+    for sampleIndex, point := range points {
+        // Update the forest with this point and record the average score
+        scores[sampleIndex] = UpdateForest(token, lastIndex+sampleIndex, point)
+    }
 ```
 
 ### Test results

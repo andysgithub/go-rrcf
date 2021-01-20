@@ -12,6 +12,9 @@ func TestTrials(t *testing.T) {
 
 	plotPoints = StreamingTrial()
 	utils.WriteToCsv(plotPoints, "results/streaming/plot_points.csv")
+
+	plotPoints = TrainingTrial()
+	utils.WriteToCsv(plotPoints, "results/training/plot_points.csv")
 }
 
 // BatchTrial shows how the algorithm can be used to detect outliers in a batch setting
@@ -43,10 +46,41 @@ func StreamingTrial() [][]float64 {
 	// Create a map to store the anomaly score of each point
 	scores := make(map[int]float64)
 
-	// For each point
+	// For each streamed data point
 	for sampleIndex, point := range points {
 		// Update the forest with this point and record the average score
 		scores[sampleIndex] = UpdateForest(token, sampleIndex, point)
+	}
+
+	// Return points for plotting
+	return utils.GetDataPoints(points, scores, 0)
+}
+
+// TrainingTrial shows how the forest can be pre-trained with anomaly-free data then continue streaming
+func TrainingTrial() [][]float64 {
+	// Get sine function data for training
+	points, _ := utils.ReadFromCsv("data/training.csv")
+
+	// Construct a forest of empty trees
+	token := InitForest(40, 256, nil, 3)
+
+	// For each training data point
+	for sampleIndex, point := range points {
+		// Update the forest with this point
+		UpdateForest(token, sampleIndex, point)
+	}
+	lastIndex := len(points)
+
+	// Get sine function data with anomalies
+	points, _ = utils.ReadFromCsv("data/sine.csv")
+
+	// Create a map to store the anomaly score of each point
+	scores := make(map[int]float64)
+
+	// For each streamed data point
+	for sampleIndex, point := range points {
+		// Update the forest with this point and record the average score
+		scores[sampleIndex] = UpdateForest(token, lastIndex+sampleIndex, point)
 	}
 
 	// Return points for plotting
